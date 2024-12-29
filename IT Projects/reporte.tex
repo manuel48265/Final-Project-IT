@@ -1,0 +1,213 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="latin-1">
+    <title>Financial Forecasting Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 20px; }
+        h1, h2, h3 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .page-break { page-break-after: always; }
+        .section-break{ margin-top: 20px; margin-bottom: 20px}
+    </style>
+</head>
+<body>
+
+    <h1>Financial Forecasting Report</h1>
+
+    <div class="section-break">
+        <h2>Introduction</h2>
+        <p>This report presents a detailed analysis of the company's financial performance over the past year and provides projections for future revenue and expenses. The report aims to identify significant trends, relationships, and potential risks, offering strategic recommendations to optimize financial outcomes. The analysis is based on the provided monthly data for revenue (ingresos) and expenses (gastos) from January to December.</p>
+    </div>
+
+    <div class="page-break"></div>
+
+    <div class="section-break">
+    <h2>Trend Analysis</h2>
+
+        <h3>Revenue Trend</h3>
+        <p>The company's revenue shows a general upward trend throughout the year, indicating growth in overall business activity. We can observe that revenue starts at 5000 in January and peaks at 6700 in December. There are some monthly variations, but the overall direction is positive. </p>
+        <p>Monthly changes in revenue vary. For example, we can see a slight increase from January to February (5000 to 6000), followed by a dip in March (to 5500).  There are also periods of consistent growth like from May to August. The largest increase can be seen in December, which is 19% higher than January. The growth is not linear, but there is a clear overall positive trend.</p>
+
+        <h3>Expense Trend</h3>
+        <p>Expenses also demonstrate an upward trend over the year, albeit with a more moderate pace than revenue. Starting at 3000 in January, expenses reach 3800 by December. This gradual increase is essential to note, as it indicates that while revenue is increasing, operational costs are also rising. The lowest expense is in March (2800) and the highest in December (3800).</p>
+        <p>The monthly changes in expenses are also variable but overall expenses tend to follow revenue variations, meaning in months where revenue goes up, expenses also go up, although not proportionally.</p>
+    
+    
+        <h3>Yearly Changes</h3>
+        <p>Over the entire year, both revenue and expenses have increased. Revenue grew from 5000 in January to 6700 in December, a 34% increase. Expenses grew from 3000 to 3800, representing a 26.6% increase. This indicates that while both revenues and expenses are growing, revenue growth outpaces expense growth, which is generally positive. However, it is important to monitor the relative growth of expenses to ensure that profitability is maintained.</p>
+    </div>
+
+    <div class="page-break"></div>
+
+    <div class="section-break">
+        <h2>Future Projection (Forecasting)</h2>
+        <p>Given the available data, forecasting revenue and expenses will rely on basic trend extrapolation. Due to the limited data set and the absence of external factors, a more complex forecasting method (like ARIMA) isn't suitable, and might lead to overfitting. The method below assumes that the basic trends will continue, but the accuracy will decrease the further out the projection is made.</p>
+        <h3>Forecasting Model: Simple Trend Extrapolation</h3>
+        <p>The method used for this forecasting report is based on simple linear extrapolation. For revenue we're taking the average monthly increase and applying it over the next months. For expenses we're doing a similar calculation.</p>
+
+    <h3>3-Month Projection</h3>
+    
+    <p><b>Revenue:</b> We will calculate the average monthly revenue increase to find the projected revenue for the next three months. The revenue increased a total of 1700 over 11 months (from January to December) which makes the average monthly revenue increase of 154.55 (1700 / 11). Using this average, the revenue projection for January will be 6854.55, for February will be 7009.1, and for March it will be 7163.65</p>
+
+    <p><b>Expenses:</b> We will calculate the average monthly expense increase to find the projected expenses for the next three months. The expenses increased a total of 800 over 11 months (from January to December), which makes the average monthly increase 72.73 (800 / 11). Using this average, the expenses projection for January will be 3872.73, for February will be 3945.46, and for March will be 4018.19.</p>
+     
+      <table>
+        <thead>
+          <tr>
+             <th>Month</th>
+             <th>Projected Revenue</th>
+             <th>Projected Expenses</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+              <td>January</td>
+              <td>6854.55</td>
+              <td>3872.73</td>
+           </tr>
+            <tr>
+              <td>February</td>
+              <td>7009.1</td>
+              <td>3945.46</td>
+           </tr>
+            <tr>
+              <td>March</td>
+              <td>7163.65</td>
+              <td>4018.19</td>
+           </tr>
+        </tbody>
+      </table>
+      
+    <h3>6-Month Projection</h3>
+      <p>Using the same average method, we will extend the projection for 3 more months.</p>
+       <p><b>Revenue:</b> Using the average monthly revenue increase of 154.55, we add another 3 months of growth, obtaining the following: April (7318.2), May (7472.75), and June (7627.3).</p>
+       <p><b>Expenses:</b> Using the average monthly expense increase of 72.73, we add another 3 months of growth, obtaining the following: April (4090.92), May (4163.65), and June (4236.38).</p>
+        <table>
+        <thead>
+          <tr>
+             <th>Month</th>
+             <th>Projected Revenue</th>
+             <th>Projected Expenses</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+              <td>April</td>
+              <td>7318.2</td>
+              <td>4090.92</td>
+           </tr>
+            <tr>
+              <td>May</td>
+              <td>7472.75</td>
+              <td>4163.65</td>
+           </tr>
+            <tr>
+              <td>June</td>
+              <td>7627.3</td>
+              <td>4236.38</td>
+           </tr>
+        </tbody>
+      </table>
+
+    <h3>12-Month Projection</h3>
+       <p>Using the same average method, we will extend the projection for 6 more months.</p>
+       <p><b>Revenue:</b> Using the average monthly revenue increase of 154.55, we add another 6 months of growth, obtaining the following: July (7781.85), August (7936.4), September (8090.95), October (8245.5), November (8400.05), and December (8554.6).</p>
+       <p><b>Expenses:</b> Using the average monthly expense increase of 72.73, we add another 6 months of growth, obtaining the following: July (4309.11), August (4381.84), September (4454.57), October (4527.3), November (4600.03), and December (4672.76).</p>
+
+    <table>
+    <thead>
+      <tr>
+        <th>Month</th>
+        <th>Projected Revenue</th>
+        <th>Projected Expenses</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+          <td>July</td>
+          <td>7781.85</td>
+          <td>4309.11</td>
+      </tr>
+       <tr>
+          <td>August</td>
+          <td>7936.4</td>
+          <td>4381.84</td>
+        </tr>
+       <tr>
+          <td>September</td>
+          <td>8090.95</td>
+          <td>4454.57</td>
+        </tr>
+       <tr>
+          <td>October</td>
+          <td>8245.5</td>
+          <td>4527.3</td>
+      </tr>
+       <tr>
+          <td>November</td>
+          <td>8400.05</td>
+          <td>4600.03</td>
+        </tr>
+       <tr>
+          <td>December</td>
+          <td>8554.6</td>
+          <td>4672.76</td>
+        </tr>
+    </tbody>
+  </table>
+  <p><b>Important Note:</b> These projections are based on a linear trend assumption and don't factor in seasonality or external factors. Use these values as guidelines and not as absolutes. The actual numbers will be influenced by other factors.</p>
+
+    </div>
+
+    <div class="page-break"></div>
+
+    <div class="section-break">
+        <h2>Revenue-Expense Relationship Analysis</h2>
+        <p>The relationship between revenue and expenses shows a consistent pattern throughout the year. Revenue consistently exceeds expenses every month, which is an indication of a healthy financial situation and profitability. The margin between revenue and expenses fluctuates, and it's important to understand these fluctuations.</p>
+        <p>From January to March, the margin between revenues and expenses is larger, indicating higher relative profit. However, from April onward, the gap tightens, and the margins become smaller although revenues remain higher than expenses. The closing of this gap means that, while profits are still good, the relative profit is decreasing, requiring closer monitoring of expenses.
+         </p>
+       <p>Overall, no points where expenses approach or exceed revenue are observed in the provided data, which is a positive indicator. However, the decreasing profit margin suggests a need for the company to optimize expenses to keep up with the revenue.</p>
+       
+    </div>
+
+    <div class="page-break"></div>
+
+    <div class="section-break">
+        <h2>External Factors</h2>
+        <p>While this report primarily focuses on internal data, it’s crucial to acknowledge the potential impact of external factors on future financial outcomes. These could include:</p>
+        <ul>
+          <li><b>Market Changes:</b> Shifts in consumer preferences or demand can impact revenue.</li>
+          <li><b>Inflation:</b> Rising costs of materials or services can affect expenses.</li>
+            <li><b>Industry Trends:</b>  New technologies or competitive pressures can alter revenue streams and/or increase costs.</li>
+            <li><b>Economic Conditions:</b>  Recessions or expansions can impact overall spending, affecting revenue.</li>
+            <li><b>Seasonality:</b> Although not shown in this data, seasonal factors can influence specific months more than others and might introduce variability.</li>
+        </ul>
+        <p>The company should stay informed about these external forces and incorporate potential impacts into future planning.</p>
+    </div>
+
+    <div class="section-break">
+      <h2>Strategic Recommendations</h2>
+    <p>Based on the analysis above, here are some strategic recommendations for the company:</p>
+
+    <ul>
+          <li><b>Monitor Expense Growth:</b> The steady increase in expenses needs close monitoring to ensure profitability is maintained. Consider identifying areas where cost optimization is possible without affecting the quality or operations.</li>
+           <li><b>Analyze Decreasing Margin:</b> Investigate why the margin between revenue and expenses is tightening.  Determine if this trend is related to increased spending or decreased profitability.</li>
+          <li><b>Explore Revenue Growth Opportunities:</b>  While revenue growth is positive, continuous exploration of new revenue streams is crucial. Consider new marketing channels, expanding the product line, or identifying new business opportunities.</li>
+          <li><b>Seasonal Analysis:</b> If historical data shows seasonal patterns, create models that capture these patterns and can help for future planning and forecasting.</li>
+        <li><b>Contingency Planning:</b> Create a financial contingency plan to deal with potential external factors that may affect operations, like recessions, inflation, or increased competition.</li>
+      </ul>
+      <p>Implementing these recommendations will help the company to optimize its financial results, control expenses, and capitalize on available opportunities, leading to more stable and profitable long-term growth.</p>
+    </div>
+     
+     <div class="section-break">
+        <h2>Conclusion</h2>
+         <p>This report has provided a comprehensive overview of the company’s financial performance, detailing the trends, relationships between revenue and expenses, and projections for the future.  By carefully considering the strategic recommendations provided, the company can make informed financial decisions and position itself for continued success. It is important to keep monitoring these factors to maintain a good outlook.</p>
+    </div>
+
+</body>
+</html>
+```
