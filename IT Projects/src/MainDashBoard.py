@@ -4,7 +4,9 @@ from tkinter.colorchooser import askcolor
 import os
 import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
-from Project import Proyecto
+from Project import Proyecto, Ventana
+from GeneralExpenses import PaginaGastosGenerales
+from src.Constants import current_currency
 
 class MainDashBoard:
     def __init__(self, root):
@@ -23,18 +25,25 @@ class MainDashBoard:
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
 
         tk.Label(sidebar, text="Menú", bg="#2F2F3F", fg="white", font=("Arial", 16, "bold"), pady=10).pack()
-        tk.Button(sidebar, text="Inicio", bg="#3F3F4F", fg="white", font=("Arial", 12), relief=tk.FLAT).pack(fill=tk.X, pady=5, padx=10)
-        tk.Button(sidebar, text="Configuración", bg="#3F3F4F", fg="white", font=("Arial", 12), relief=tk.FLAT).pack(fill=tk.X, pady=5, padx=10)
+        tk.Button(sidebar, text="Projects", bg="#3F3F4F", fg="white", font=("Arial", 12), relief=tk.FLAT, command=self.mostrar_dashboard).pack(fill=tk.X, pady=5, padx=10)
+        tk.Button(sidebar, text="General Costs", bg="#3F3F4F", fg="white", font=("Arial", 12), relief=tk.FLAT, command=self.mostrar_gastos_generales).pack(fill=tk.X, pady=5, padx=10)
+        tk.Button(sidebar, text="Total Costs", bg="#3F3F4F", fg="white", font=("Arial", 12), relief=tk.FLAT).pack(fill=tk.X, pady=5, padx=10)
 
         # Contenedor principal
-        main_frame = tk.Frame(self.root, bg="#1E1E2F")
-        main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.main_frame = tk.Frame(self.root, bg="#1E1E2F")
+        self.main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Título
-        tk.Label(main_frame, text="Dashboard de Proyectos", bg="#1E1E2F", fg="white", font=("Arial", 20, "bold"), pady=10).pack()
+        self.load_proyectos()
+        self.mostrar_dashboard()
+
+    def mostrar_dashboard(self):
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+
+        tk.Label(self.main_frame, text="Dashboard de Proyectos", bg="#1E1E2F", fg="white", font=("Arial", 20, "bold"), pady=10).pack()
 
         # Frame para crear proyectos
-        frame_nuevo_proyecto = tk.Frame(main_frame, bg="#1E1E2F", pady=10)
+        frame_nuevo_proyecto = tk.Frame(self.main_frame, bg="#1E1E2F", pady=10)
         frame_nuevo_proyecto.pack(fill=tk.X, padx=10)
 
         tk.Label(frame_nuevo_proyecto, text="Ruta DB:", bg="#1E1E2F", fg="white", font=("Arial", 12)).grid(row=0, column=0, padx=5, pady=5, sticky="w")
@@ -48,7 +57,7 @@ class MainDashBoard:
         tk.Button(frame_nuevo_proyecto, text="Crear Proyecto", command=self.crear_proyecto, bg="#4CAF50", fg="white", font=("Arial", 12), relief=tk.FLAT).grid(row=0, column=4, padx=5, pady=5)
 
         # Frame para mostrar proyectos
-        self.frame_proyectos = tk.Frame(main_frame, bg="#1E1E2F")
+        self.frame_proyectos = tk.Frame(self.main_frame, bg="#1E1E2F")
         self.frame_proyectos.pack(pady=10, fill=tk.BOTH, expand=True)
 
         self.canvas = tk.Canvas(self.frame_proyectos, bg="#1E1E2F", highlightthickness=0)
@@ -72,8 +81,12 @@ class MainDashBoard:
         self.canvas.bind_all("<Button-4>", self.scroll_horizontal)
         self.canvas.bind_all("<Button-5>", self.scroll_horizontal)
 
-        self.load_proyectos()
         self.mostrar_proyectos()
+
+    def mostrar_gastos_generales(self):
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        PaginaGastosGenerales(self.main_frame)
 
     def scroll_horizontal(self, event):
         if event.num == 4:  # Desplazamiento hacia arriba
@@ -108,6 +121,8 @@ class MainDashBoard:
             self.mostrar_proyecto(proyecto)
 
     def mostrar_proyecto(self, proyecto):
+
+        print(f"Mostrando proyecto: {proyecto.get_name()}")
         frame_proyecto = tk.Frame(self.scroll_frame, bg="#2F2F3F", borderwidth=2, relief="groove", padx=10, pady=10)
         frame_proyecto.pack(side=tk.LEFT, padx=10, pady=10)
 
@@ -117,41 +132,63 @@ class MainDashBoard:
         gastos = proyecto.calcular_total_gastos()
         balance = proyecto.calcular_balance()
 
-        tk.Label(frame_proyecto, text=f"Ingresos Totales: {ingresos}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
-        tk.Label(frame_proyecto, text=f"Gastos Totales: {gastos}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
-        tk.Label(frame_proyecto, text=f"Balance: {balance}", bg="#2F2F3F", fg="#4CAF50" if balance >= 0 else "#F44336", font=("Arial", 12, "bold")).pack(anchor="w")
-
-        btn_grafico = tk.Button(frame_proyecto, text="Ver Gráfico", command=lambda: self.toggle_grafico(proyecto, frame_proyecto, btn_grafico), bg="#2196F3", fg="white", font=("Arial", 12))
-        btn_grafico.pack(pady=5)
+        tk.Label(frame_proyecto, text=f"Ingresos Totales: {ingresos} {current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
+        tk.Label(frame_proyecto, text=f"Gastos Totales: {gastos} {current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
+        tk.Label(frame_proyecto, text=f"Balance: {balance} {current_currency}", bg="#2F2F3F", fg="#4CAF50" if balance >= 0 else "#F44336", font=("Arial", 12, "bold")).pack(anchor="w")
 
         frame_proyecto.chart_label = None  # Etiqueta para el gráfico
 
-    def toggle_grafico(self, proyecto, frame_proyecto, btn_grafico):
-        if frame_proyecto.chart_label:
-            frame_proyecto.chart_label.destroy()
-            frame_proyecto.chart_label = None
-            btn_grafico.config(text="Ver Gráfico")
+        print("Mostando gráfico")
+        
+        frame_proyecto.btn_grafico = tk.Button(frame_proyecto, text="Ver Gráfico",
+                                              command=lambda: self.toggle_grafico(proyecto, frame_proyecto),
+                                              bg="#2196F3", fg="white", font=("Arial", 12))
+        frame_proyecto.btn_grafico.pack(pady=5)
+
+        print("Quitando gráfico")
+
+        frame_proyecto.btn_quitar_grafico = tk.Button(frame_proyecto, text="Quitar Gráfico",
+                                                      command=lambda: self.quitar_grafico(frame_proyecto),
+                                                      bg="#F44336", fg="white", font=("Arial", 12))
+        frame_proyecto.btn_quitar_grafico.pack_forget()
+
+        
+
+    def toggle_grafico(self, proyecto: Proyecto, frame_proyecto):
+        
+        if frame_proyecto.chart_label is None:
+            ventana = Ventana(frame_proyecto, proyecto)
+            frame_proyecto.btn_grafico.pack_forget()
+            frame_proyecto.btn_quitar_grafico.pack(pady=5)
+            frame_proyecto.chart_label = ventana
+            frame_proyecto.btn_cambiar_periodo = tk.Button(frame_proyecto, text="Cambiar Periodo",
+                                                          command=lambda: self.cambiar_periodo(frame_proyecto),
+                                                          bg="#FFC107", fg="white", font=("Arial", 12))
+            frame_proyecto.btn_cambiar_periodo.pack(pady=5)
+            frame_proyecto.chart_label.mostrar_chart()
+            
+
         else:
-            chart_path = "chart.png"
-            proyecto.generar_chart(chart_path=chart_path)
+            self.quitar_grafico(frame_proyecto)
 
-            img = Image.open(chart_path)
-            img_tk = ImageTk.PhotoImage(img)
+    def cambiar_periodo(self, frame_proyecto):
+        frame_proyecto.chart_label.cambiar_periodo()
+        frame_proyecto.chart_label.chart.destroy()
+        frame_proyecto.chart_label.mostrar_chart()
+        frame_proyecto.btn_cambiar_periodo.pack(pady=5)
 
-            chart_label = tk.Label(frame_proyecto, image=img_tk, bg="#2F2F3F")
-            chart_label.image = img_tk  # Guardar referencia para evitar recolección por el garbage collector
-            chart_label.pack()
-            frame_proyecto.chart_label = chart_label
-            btn_grafico.config(text="Quitar Gráfico")
+
+
+    def quitar_grafico(self, frame_proyecto):
+        if frame_proyecto.chart_label:
+            frame_proyecto.chart_label.chart.destroy()
+            frame_proyecto.chart_label = None
+            frame_proyecto.btn_quitar_grafico.pack_forget()
+            frame_proyecto.btn_cambiar_periodo.pack_forget()
+            frame_proyecto.btn_grafico.pack(pady=5)
+
 
     def on_closing(self):
-        for frame in self.scroll_frame.winfo_children():
-            if hasattr(frame, "chart_label") and frame.chart_label:
-                frame.chart_label.destroy()
-
-        if os.path.exists("chart.png"):
-            os.remove("chart.png")
-
         self.root.quit()
         self.root.destroy()
 
