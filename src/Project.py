@@ -4,7 +4,6 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backend_bases import MouseEvent
 from tkinter import Toplevel, Label
-from src.Constants import current_currency
 from src.Currency import Currency
 
 class Proyecto:
@@ -23,7 +22,7 @@ class Proyecto:
         conn = self._connect()
         ingresos_query = "SELECT amount,currency FROM ingresos"
         df_ingresos = pd.read_sql_query(ingresos_query, conn)
-        df_ingresos['amount'] = df_ingresos.apply(lambda x: Currency(x['amount'], x['currency']).convert_to(current_currency).get_amount(), axis=1)
+        df_ingresos['amount'] = df_ingresos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1)
         total_ingresos = df_ingresos['amount'].sum()
         conn.close()
         return total_ingresos
@@ -32,7 +31,7 @@ class Proyecto:
         conn = self._connect()
         gastos_query = "SELECT amount,currency FROM gastos"
         df_gastos = pd.read_sql_query(gastos_query, conn)
-        df_gastos['amount'] = df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert_to(current_currency).get_amount(), axis=1)
+        df_gastos['amount'] = df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1)
         total_gastos = df_gastos['amount'].sum()
         conn.close()
         return total_gastos
@@ -54,8 +53,8 @@ class Proyecto:
         df_gastos['date'] = pd.to_datetime(df_gastos['date'])
 
         # Convertir a la moneda actual
-        df_ingresos['amount'] = df_ingresos.apply(lambda x: Currency(x['amount'], x['currency']).convert_to(current_currency).get_amount(), axis=1)
-        df_gastos['amount'] = df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert_to(current_currency).get_amount(), axis=1)
+        df_ingresos['amount'] = df_ingresos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1)
+        df_gastos['amount'] = df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1)
 
 
         if periodo == 'mensual':

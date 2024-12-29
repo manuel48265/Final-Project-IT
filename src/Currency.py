@@ -1,6 +1,12 @@
 import requests
+from datetime import date, datetime, timedelta
 
 class Currency:
+    time_delta = timedelta(minutes=1)
+    rates = None
+    current_currency = 'PLN'
+    last_update = None
+
     def __init__(self, amount, currency_type):
         self._amount = amount
         self._currency_type = currency_type
@@ -20,14 +26,26 @@ class Currency:
     def __str__(self):
         return f"{self._currency_type}"
     
-    def convert_to(self, target_currency):
-        url = f"https://api.exchangerate-api.com/v4/latest/{self._currency_type}"
-        response = requests.get(url)
-        data = response.json()
-        if target_currency in data['rates']:
-            rate = data['rates'][target_currency]
-            converted_amount = self._amount * rate
-            return Currency(converted_amount, target_currency)
-        else:
-            raise ValueError(f"Conversion rate for {target_currency} not found.")
+    @staticmethod
+    def update():
+        if Currency.rates is None or Currency.last_update is None:
+            Currency.last_update = datetime.now()
+            url = f"https://api.exchangerate-api.com/v4/latest/{Currency.current_currency}"
+            response = requests.get(url)
+            Currency.rates = response.json()['rates']
+        elif (datetime.now() - Currency.last_update).min > Currency.time_delta:
+            Currency.last_update = datetime.now()
+            url = f"https://api.exchangerate-api.com/v4/latest/{Currency.current_currency}"
+            response = requests.get(url)
+            Currency.rates = response.json()['rates']
+        
+        
+    def convert(self):
+        Currency.update()
+        rate = Currency.rates[self._currency_type]
+        converted_amount = self._amount / rate
+        return converted_amount
+        
+
+
 

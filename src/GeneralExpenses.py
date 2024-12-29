@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 import sqlite3
-from src.Constants import current_currency
+import pandas as pd
+from Currency import Currency
 
 class PaginaGastosGenerales:
     def __init__(self, parent_frame):
@@ -44,10 +45,18 @@ class PaginaGastosGenerales:
         
         self.invoice_entry = tk.Entry(self.input_frame, font=("Arial", 12))
         self.invoice_entry.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+
+        self.currency_label = tk.Label(self.input_frame, text="Moneda:", fg="white", bg="#2F2F3F", font=("Arial", 12))
+        self.currency_label.grid(row=4, column=0, padx=10, pady=5, sticky="w")
         
+        self.currency_var = tk.StringVar()
+        self.currency_combobox = ttk.Combobox(self.input_frame, textvariable=self.currency_var, state="readonly", font=("Arial", 12))
+        self.currency_combobox.grid(row=4, column=1, padx=10, pady=5, sticky="w")
+        self.currency_combobox['values'] = ["USD", "EUR", "MXN"]  # Ejemplo de monedas
+
         # Botón para agregar el gasto
         self.add_button = tk.Button(self.input_frame, text="Agregar Gasto", command=self.agregar_gasto, bg="#2196F3", fg="white", font=("Arial", 12))
-        self.add_button.grid(row=4, column=0, columnspan=2, pady=10)
+        self.add_button.grid(row=5, column=0, columnspan=2, pady=10)
 
         # Frame para la búsqueda de gastos
         self.search_frame = tk.Frame(self.main_frame, bg="#2F2F3F")
@@ -83,24 +92,34 @@ class PaginaGastosGenerales:
         self.search_invoice_entry = tk.Entry(self.search_frame, font=("Arial", 12))
         self.search_invoice_entry.grid(row=2, column=3, padx=10, pady=5, sticky="w")
 
+        self.search_currency_label = tk.Label(self.search_frame, text="Moneda:", fg="white", bg="#2F2F3F", font=("Arial", 12))
+        self.search_currency_label.grid(row=3, column=0, padx=10, pady=5, sticky="w")
+        
+        self.search_currency_var = tk.StringVar()
+        self.search_currency_combobox = ttk.Combobox(self.search_frame, textvariable=self.search_currency_var, state="readonly", font=("Arial", 12))
+        self.search_currency_combobox.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+        self.search_currency_combobox['values'] = ["", "USD", "EUR", "MXN"]  # Ejemplo de monedas
+
         # Botón para realizar la búsqueda
         self.search_button = tk.Button(self.search_frame, text="Buscar", command=self.buscar_gastos, bg="#4CAF50", fg="white", font=("Arial", 12))
-        self.search_button.grid(row=3, column=0, columnspan=4, pady=10)
+        self.search_button.grid(row=4, column=0, columnspan=4, pady=10)
 
         # Frame para la tabla de gastos
         self.table_frame = tk.Frame(self.main_frame, bg="#2F2F3F")
         self.table_frame.pack(fill=tk.BOTH, expand=True, pady=10)
 
         # Tabla de gastos
-        self.tree = ttk.Treeview(self.table_frame, columns=("Tipo", "Fecha", "Monto", "Factura"), show="headings", height=8)
+        self.tree = ttk.Treeview(self.table_frame, columns=("Tipo", "Fecha", "Monto", "Moneda", "Factura"), show="headings", height=8)
         self.tree.heading("Tipo", text="Tipo")
         self.tree.heading("Fecha", text="Fecha")
         self.tree.heading("Monto", text="Monto")
+        self.tree.heading("Moneda", text="Moneda")
         self.tree.heading("Factura", text="Factura")
         
         self.tree.column("Tipo", width=150, anchor="w")
         self.tree.column("Fecha", width=100, anchor="center")
         self.tree.column("Monto", width=100, anchor="e")
+        self.tree.column("Moneda", width=100, anchor="center")
         self.tree.column("Factura", width=200, anchor="w")
         
         self.tree.pack(fill=tk.BOTH, expand=True)
@@ -130,7 +149,7 @@ class PaginaGastosGenerales:
         cursor = conn.cursor()
 
         query = """
-        SELECT expense_types.type_name, gastos.date, gastos.amount, gastos.invoice_link
+        SELECT expense_types.type_name, gastos.date, gastos.amount, gastos.currency, gastos.invoice_link
         FROM gastos
         JOIN expense_types ON gastos.expense_type = expense_types.val
         WHERE 1=1
@@ -160,6 +179,7 @@ class PaginaGastosGenerales:
         fecha = self.search_date_entry.get()
         monto = self.search_amount_entry.get()
         factura = self.search_invoice_entry.get()
+        moneda = self.search_currency_var.get()
 
         if tipo:
             filters.append(f"expense_types.type_name LIKE '%{tipo}%'")
@@ -169,6 +189,8 @@ class PaginaGastosGenerales:
             filters.append(f"gastos.amount = {monto}")
         if factura:
             filters.append(f"gastos.invoice_link LIKE '%{factura}%'")
+        if moneda:
+            filters.append(f"gastos.currency = '{moneda}'")
 
         filter_query = " AND ".join(filters)
         self.cargar_datos_gastos(f" AND {filter_query}" if filter_query else "")
@@ -179,8 +201,9 @@ class PaginaGastosGenerales:
         fecha = self.date_entry.get()
         monto = self.amount_entry.get()
         factura = self.invoice_entry.get()
+        moneda = self.currency_var.get()
 
-        if tipo and fecha and monto and factura:
+        if tipo and fecha and monto and factura and moneda:
             conn = sqlite3.connect("genericos.db")
             cursor = conn.cursor()
 
@@ -190,9 +213,9 @@ class PaginaGastosGenerales:
 
             # Insertar el gasto en la base de datos
             cursor.execute("""
-            INSERT INTO gastos (amount, invoice_number, payment_state, concept, invoice_link, date, expense_type)
-            VALUES (?, ?, 'pending', ?, ?, ?, ?)
-            """, (monto, 0, tipo, factura, fecha, tipo_id))
+            INSERT INTO gastos (amount, invoice_number, payment_state, concept, invoice_link, date, expense_type, currency)
+            VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)
+            """, (monto, 0, tipo, factura, fecha, tipo_id, moneda))
 
             conn.commit()
             conn.close()
@@ -204,20 +227,26 @@ class PaginaGastosGenerales:
     def actualizar_total(self):
         """Actualizar el total de los gastos"""
         conn = sqlite3.connect("genericos.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT SUM(amount) FROM gastos")
-        total = cursor.fetchone()[0] or 0
+        gastos_query = "SELECT amount,currency FROM gastos"
+        df_gastos = pd.read_sql_query(gastos_query, conn)
+        df_gastos['amount'] = df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1)
+        total= df_gastos['amount'].sum()
         conn.close()
 
-        self.total_label.config(text=f"Total Gastos: ${total}")
+        self.total_label.config(text=f"Total Gastos: {total} {Currency.current_currency}")
 
     def clear_entries(self):
         """Limpiar los campos de entrada"""
         self.date_entry.delete(0, tk.END)
         self.amount_entry.delete(0, tk.END)
         self.invoice_entry.delete(0, tk.END)
+        self.currency_combobox.set("")
 
 # Crear la ventana y la clase
 #root = tk.Tk()
 #pagina_gastos = PaginaGastosGenerales(root)
 #root.mainloop()
+
+
+
+

@@ -1,13 +1,14 @@
-mes,ingresos,gastos
-Enero,5000,3000
-Febrero,6000,3200
-Marzo,5500,2800
-Abril,5800,3300
-Mayo,6200,3500
-Junio,5900,3100
-Julio,6300,3400
-Agosto,6000,3300
-Septiembre,6500,3600
-Octubre,5800,3200
-Noviembre,6100,3300
-Diciembre,6700,3800
+Month, Income, Expenses
+January, 5000, 3000
+February, 6000, 3200
+March, 5500, 2800
+April, 5800, 3300
+May, 6200, 3500
+June, 5900, 3100
+July, 6300, 3400
+August, 6000, 3300
+September, 6500, 3600
+October, 5800, 3200
+November, 6100, 3300
+December, 6700, 3800
+

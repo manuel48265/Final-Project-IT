@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 from Project import Proyecto, Ventana
 from GeneralExpenses import PaginaGastosGenerales
-from src.Constants import current_currency
+from src.Currency import Currency
 
 class MainDashBoard:
     def __init__(self, root):
@@ -132,9 +132,9 @@ class MainDashBoard:
         gastos = proyecto.calcular_total_gastos()
         balance = proyecto.calcular_balance()
 
-        tk.Label(frame_proyecto, text=f"Ingresos Totales: {ingresos} {current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
-        tk.Label(frame_proyecto, text=f"Gastos Totales: {gastos} {current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
-        tk.Label(frame_proyecto, text=f"Balance: {balance} {current_currency}", bg="#2F2F3F", fg="#4CAF50" if balance >= 0 else "#F44336", font=("Arial", 12, "bold")).pack(anchor="w")
+        tk.Label(frame_proyecto, text=f"Ingresos Totales: {ingresos} {Currency.current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
+        tk.Label(frame_proyecto, text=f"Gastos Totales: {gastos} {Currency.current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
+        tk.Label(frame_proyecto, text=f"Balance: {balance} {Currency.current_currency}", bg="#2F2F3F", fg="#4CAF50" if balance >= 0 else "#F44336", font=("Arial", 12, "bold")).pack(anchor="w")
 
         frame_proyecto.chart_label = None  # Etiqueta para el gráfico
 
