@@ -4,13 +4,13 @@ from tkinter import ttk
 
 # Función para obtener datos de la base de datos
 def obtener_datos(orden, ascendente=True):
-    conexion = sqlite3.connect('contabilidad.db')
+    conexion = sqlite3.connect('genericos.db')
     cursor = conexion.cursor()
     # Usar un formato seguro para ordenar
     orden_dir = "ASC" if ascendente else "DESC"
     consulta = f"""
-        SELECT f.id, f.amount, f.invoice_number, f.payment_state, f.concept, f.invoice_link, f.date, e.type_name as expense_type
-        FROM finanzas f
+        SELECT f.id, f.amount, f.currency, f.invoice_number, f.payment_state, f.concept, f.invoice_link, f.date, e.type_name as expense_type
+        FROM gastos f
         JOIN expense_types e ON f.expense_type = e.val
         ORDER BY {orden} {orden_dir}
     """
@@ -74,6 +74,7 @@ def crear_interfaz():
     columnas = {
         "id": "ID",
         "amount": "Amount",
+        "currency": "Currency",
         "invoice_number": "Invoice Number",
         "payment_state": "Payment State",
         "concept": "Concept",

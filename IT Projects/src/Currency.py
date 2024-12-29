@@ -19,7 +19,7 @@ class Currency:
 
     def __str__(self):
         return f"{self._currency_type}"
-
+    
     def convert_to(self, target_currency):
         url = f"https://api.exchangerate-api.com/v4/latest/{self._currency_type}"
         response = requests.get(url)
