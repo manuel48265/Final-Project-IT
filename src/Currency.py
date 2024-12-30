@@ -27,6 +27,13 @@ class Currency:
         return f"{self._currency_type}"
     
     @staticmethod
+    def change_currency(currency):
+        Currency.current_currency = currency
+        Currency.rates = None
+        Currency.update()
+
+    
+    @staticmethod
     def update():
         if Currency.rates is None or Currency.last_update is None:
             Currency.last_update = datetime.now()
