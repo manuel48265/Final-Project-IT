@@ -17,6 +17,9 @@ class Proyecto:
 
     def get_name(self):
         return self.name
+    
+    def get_dbpath(self):
+        return self.db_path
 
     def calcular_total_ingresos(self):
         conn = self._connect()
@@ -53,8 +56,8 @@ class Proyecto:
         df_gastos['date'] = pd.to_datetime(df_gastos['date'])
 
         # Convertir a la moneda actual
-        df_ingresos['amount'] = df_ingresos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1)
-        df_gastos['amount'] = df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1)
+        df_ingresos['amount'] = round(df_ingresos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1),2)
+        df_gastos['amount'] = round(df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1),2)
 
 
         if periodo == 'mensual':
@@ -116,6 +119,9 @@ class Ventana:
             self.periodo = 'anual'
         else:
             self.periodo = 'mensual'
+
+    def set_periodo(self, periodo):
+        self.periodo = periodo
 
     def mostrar_chart(self):
         fig, bars, data = self.proyecto.generar_chart(periodo=self.periodo)

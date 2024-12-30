@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import sqlite3
 import pandas as pd
-from Currency import Currency
+from src.Currency import Currency
 
 class PaginaGastosGenerales:
     def __init__(self, parent_frame):
@@ -171,7 +171,7 @@ class PaginaGastosGenerales:
         self.actualizar_total()
 
     def buscar_gastos(self):
-        """Buscar los gastos con los filtros proporcionados"""
+        """Buscar los gastos con los filtros proporcionados y actualizar el total"""
         filters = []
 
         # Obtener los valores de búsqueda
@@ -194,6 +194,8 @@ class PaginaGastosGenerales:
 
         filter_query = " AND ".join(filters)
         self.cargar_datos_gastos(f" AND {filter_query}" if filter_query else "")
+        self.actualizar_total(f" AND {filter_query}" if filter_query else "")
+
 
     def agregar_gasto(self):
         """Agregar un gasto a la base de datos y actualizar la tabla"""
@@ -224,16 +226,27 @@ class PaginaGastosGenerales:
             self.cargar_datos_gastos()
             self.clear_entries()
 
-    def actualizar_total(self):
-        """Actualizar el total de los gastos"""
+    def actualizar_total(self, filter_query=""):
+        """Actualizar el total de los gastos con un filtro opcional"""
         conn = sqlite3.connect("genericos.db")
-        gastos_query = "SELECT amount,currency FROM gastos"
-        df_gastos = pd.read_sql_query(gastos_query, conn)
-        df_gastos['amount'] = df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1)
-        total= df_gastos['amount'].sum()
+        query = f"""
+        SELECT expense_types.type_name, gastos.amount, gastos.currency
+        FROM gastos
+        JOIN expense_types ON gastos.expense_type = expense_types.val
+        WHERE 1=1
+        """ + filter_query
+        
+        df_gastos = pd.read_sql_query(query, conn)
         conn.close()
 
-        self.total_label.config(text=f"Total Gastos: {total} {Currency.current_currency}")
+        if not df_gastos.empty:
+            df_gastos['amount'] = df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1)
+            total = df_gastos['amount'].sum()
+        else:
+            total = 0
+
+        self.total_label.config(text=f"Total Gastos: {round(total, 2)} {Currency.current_currency}")
+        self.total_label.update()
 
     def clear_entries(self):
         """Limpiar los campos de entrada"""
@@ -241,6 +254,11 @@ class PaginaGastosGenerales:
         self.amount_entry.delete(0, tk.END)
         self.invoice_entry.delete(0, tk.END)
         self.currency_combobox.set("")
+
+    def update_currency(self):
+        """Actualizar la vista cuando se cambia la moneda"""
+        self.actualizar_total()
+
 
 # Crear la ventana y la clase
 #root = tk.Tk()
