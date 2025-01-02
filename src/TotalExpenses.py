@@ -16,8 +16,8 @@ class PaginaTransacciones:
         self.buscar_transacciones()
 
     def _setup_ui(self):
-        """Configura la interfaz gráfica."""
-        self.title_label = tk.Label(self.main_frame, text="Transacciones Totales", fg="white",
+        """Set up the graphic interface."""
+        self.title_label = tk.Label(self.main_frame, text="Total Transactions", fg="white",
                                     bg="#2F2F3F", font=("Arial", 20, "bold"))
         self.title_label.pack(pady=10)
 
@@ -28,30 +28,30 @@ class PaginaTransacciones:
         self.total_label.pack(anchor="e")
 
     def _setup_search_ui(self):
-        """Configura la interfaz de búsqueda."""
+        """Set up the search interface."""
         self.search_frame = tk.Frame(self.main_frame, bg="#2F2F3F")
         self.search_frame.pack(fill=tk.X, pady=10)
 
-        # Campos de búsqueda
-        tk.Label(self.search_frame, text="Fecha:", fg="white", bg="#2F2F3F",
+        # Search fields
+        tk.Label(self.search_frame, text="Date:", fg="white", bg="#2F2F3F",
                  font=("Arial", 12)).grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.date_entry = tk.Entry(self.search_frame, font=("Arial", 12))
         self.date_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-        tk.Label(self.search_frame, text="Tipo (Income/Expense):", fg="white", bg="#2F2F3F",
+        tk.Label(self.search_frame, text="Type (Income/Expense):", fg="white", bg="#2F2F3F",
                  font=("Arial", 12)).grid(row=0, column=2, padx=5, pady=5, sticky="w")
         self.tipo_var = tk.StringVar()
         self.tipo_combobox = ttk.Combobox(self.search_frame, textvariable=self.tipo_var,
                                           values=["", "Income", "Expense"], state="readonly", font=("Arial", 12))
         self.tipo_combobox.grid(row=0, column=3, padx=5, pady=5, sticky="w")
 
-        # Botón buscar
-        buscar_btn = tk.Button(self.search_frame, text="Buscar", command=self.buscar_transacciones,
+        # Search button
+        buscar_btn = tk.Button(self.search_frame, text="Search", command=self.buscar_transacciones,
                                bg="#4CAF50", fg="white", font=("Arial", 12))
         buscar_btn.grid(row=0, column=4, padx=5, pady=5)
 
     def _setup_table(self):
-        """Configura la tabla de transacciones."""
+        """Set up the transactions table."""
         self.table_frame = tk.Frame(self.main_frame, bg="#2F2F3F")
         self.table_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -69,13 +69,13 @@ class PaginaTransacciones:
         self.tree.pack(fill=tk.BOTH, expand=True)
 
     def buscar_transacciones(self):
-        """Busca transacciones y actualiza la tabla."""
+        """Search transactions and update the table."""
         df_final = self._obtener_transacciones()
         self._actualizar_tabla(df_final)
         self._actualizar_total(df_final)
 
     def _obtener_transacciones(self):
-        """Recupera las transacciones de las bases de datos de proyectos y genéricos."""
+        """Retrieve transactions from the projects and generic databases."""
         rows = []
         filters = self._obtener_filtros()
 
@@ -96,7 +96,7 @@ class PaginaTransacciones:
                 df_p["concept"] = proyecto.name
                 rows.append(df_p)
             except sqlite3.Error as e:
-                print(f"Error al acceder a la base de datos del proyecto {proyecto.name}: {e}")
+                print(f"Error accessing the project's database {proyecto.name}: {e}")
 
         try:
             conn_gen = sqlite3.connect("genericos.db")
@@ -110,7 +110,7 @@ class PaginaTransacciones:
             df_gen["concept"] = "General"
             rows.append(df_gen)
         except sqlite3.Error as e:
-            print(f"Error al acceder a la base de datos genérica: {e}")
+            print(f"Error accessing the generic database: {e}")
 
         df_final = pd.concat(rows, ignore_index=True)
         if filters:
@@ -120,7 +120,7 @@ class PaginaTransacciones:
         return df_final.sort_values(by="date", ascending=False)
 
     def _obtener_filtros(self):
-        """Genera filtros según los valores de búsqueda."""
+        """Generate filters according to search values."""
         filters = []
         if self.date_entry.get():
             filters.append(f"date.str.startswith('{self.date_entry.get()}')")
@@ -129,7 +129,7 @@ class PaginaTransacciones:
         return filters
 
     def _actualizar_tabla(self, df_final):
-        """Llena la tabla con los datos de las transacciones."""
+        """Fill the table with transaction data."""
         for row in self.tree.get_children():
             self.tree.delete(row)
 
@@ -140,7 +140,7 @@ class PaginaTransacciones:
             ))
 
     def _actualizar_total(self, df_final):
-        """Calcula y muestra el total ajustado."""
+        """Calculate and display the adjusted total."""
         df_final["converted"] = df_final.apply(
             lambda x: Currency(x["amount"], x["currency"]).convert(), axis=1
         )

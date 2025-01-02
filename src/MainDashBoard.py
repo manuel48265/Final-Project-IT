@@ -8,11 +8,12 @@ from Project import Proyecto, Ventana
 from GeneralExpenses import PaginaGastosGenerales
 from src.Currency import Currency
 from src.TotalExpenses import PaginaTransacciones
+from src.InterfazData import InterfazData  # Importar la nueva interfaz
 
 class MainDashBoard:
     def __init__(self, root):
         self.root = root
-        self.root.title("Dashboard de Proyectos")
+        self.root.title("Project Dashboard")
         self.root.geometry("1200x700")
         self.root.configure(bg="#1E1E2F")  # Fondo oscuro moderno
 
@@ -23,6 +24,7 @@ class MainDashBoard:
         self.setup_ui()
 
     def setup_ui(self):
+        """Set up the main interface."""
         # Crear fondo degradado
         self.create_gradient_background()
 
@@ -30,14 +32,14 @@ class MainDashBoard:
         sidebar = tk.Frame(self.root, bg="#2F2F3F", width=200)
         sidebar.pack(side=tk.LEFT, fill=tk.Y)
 
-        tk.Label(sidebar, text="Menú", bg="#2F2F3F", fg="white", font=("Arial", 16, "bold"), pady=10).pack()
+        tk.Label(sidebar, text="Menu", bg="#2F2F3F", fg="white", font=("Arial", 16, "bold"), pady=10).pack()
         tk.Button(sidebar, text="Projects", bg="#3F3F4F", fg="white", font=("Arial", 12), relief=tk.FLAT, command=self.mostrar_dashboard).pack(fill=tk.X, pady=5, padx=10)
         tk.Button(sidebar, text="General Costs", bg="#3F3F4F", fg="white", font=("Arial", 12), relief=tk.FLAT, command=self.mostrar_gastos_generales).pack(fill=tk.X, pady=5, padx=10)
         tk.Button(sidebar, text="Total Costs", bg="#3F3F4F", fg="white", font=("Arial", 12),
                   relief=tk.FLAT, command=self.mostrar_total_expenses).pack(fill=tk.X, pady=5, padx=10)
 
         # Combobox para seleccionar la divisa
-        tk.Label(sidebar, text="Divisa:", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(pady=5)
+        tk.Label(sidebar, text="Currency:", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(pady=5)
         self.currency_var = tk.StringVar()
         self.currency_combobox = ttk.Combobox(sidebar, textvariable=self.currency_var, state="readonly", font=("Arial", 12))
         self.currency_combobox['values'] = ["USD", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "CHF", "MYR", "JPY", "CNY", "LKR"]  # Ejemplo de monedas
@@ -65,24 +67,24 @@ class MainDashBoard:
         self.gradient_label.place(x=0, y=0, relwidth=1, relheight=1)
 
     def cambiar_divisa(self, event):
-        """Solo actualiza la divisa y los montos, sin recargar toda la interfaz."""
+        """Only update the currency and amounts, without reloading the entire interface."""
         Currency.change_currency(self.currency_var.get())
         self.refrescar_divisa()
 
     def refrescar_divisa(self):
-        """Recalcular y actualizar los montos mostrados por cada proyecto o página."""
+        """Recalculate and update the displayed amounts."""
         if self.current_page is not None:
             self.current_page.update_currency()
         else:
             self.mostrar_dashboard()
                 
-
     def mostrar_dashboard(self):
+        """Show the project dashboard."""
         self.current_page = None
         for widget in self.main_frame.winfo_children():
             widget.destroy()
 
-        tk.Label(self.main_frame, text="Dashboard de Proyectos", bg="#1E1E2F", fg="white", font=("Arial", 20, "bold"), pady=10).pack()
+        tk.Label(self.main_frame, text="Project Dashboard", bg="#1E1E2F", fg="white", font=("Arial", 20, "bold"), pady=10).pack()
 
         # Frame para crear proyectos
         frame_nuevo_proyecto = tk.Frame(self.main_frame, bg="#1E1E2F", pady=10)
@@ -126,13 +128,13 @@ class MainDashBoard:
         self.mostrar_proyectos()
 
     def mostrar_gastos_generales(self):
-
+        """Show the general expenses page."""
         for widget in self.main_frame.winfo_children():
             widget.destroy()
         self.current_page = PaginaGastosGenerales(self.main_frame)
 
     def mostrar_total_expenses(self):
-        """Muestra la página con la tabla de transacciones combinadas (ingresos/gastos)."""
+        """Show the page with the combined transactions table (income/expenses)."""
         self.current_page = None
         for widget in self.main_frame.winfo_children():
             widget.destroy()
@@ -145,15 +147,16 @@ class MainDashBoard:
             self.canvas.xview_scroll(1, "units")
 
     def crear_proyecto(self):
+        """Create a new project."""
         db_path = self.db_path_entry.get()
         drive_link = self.drive_link_entry.get()
 
         if not db_path or not drive_link:
-            messagebox.showerror("Error", "Por favor, complete todos los campos.")
+            messagebox.showerror("Error", "Please fill in all the fields.")
             return
 
         if not os.path.exists(db_path):
-            messagebox.showerror("Error", "La ruta de la base de datos no existe.")
+            messagebox.showerror("Error", "The database path doesn't exist.")
             return
 
         nuevo_proyecto = Proyecto(db_path, drive_link)
@@ -161,7 +164,7 @@ class MainDashBoard:
         self.mostrar_proyecto(nuevo_proyecto)
 
     def load_proyectos(self):
-        # Proyectos de ejemplo
+        # Example projects
         self.proyectos.append(Proyecto("Proyecto 1", 'contabilidad.db', 'https://drive.google.com/drive/folders/your_folder_id'))
         self.proyectos.append(Proyecto("Proyecto 2", 'contabilidad.db', 'https://drive.google.com/drive/folders/your_folder_id'))
         self.proyectos.append(Proyecto("Proyecto 3", 'contabilidad.db', 'https://drive.google.com/drive/folders/your_folder_id'))
@@ -174,23 +177,29 @@ class MainDashBoard:
             }
 
     def mostrar_proyectos(self):
+        """Display all projects."""
         for proyecto in self.proyectos:
+            proyecto.set_fechas(None, None)
             self.mostrar_proyecto(proyecto)
 
     def mostrar_proyecto(self, proyecto):
 
-        print(f"Mostrando proyecto: {proyecto.get_name()}")
+        print(f"Showing project: {proyecto.get_name()}")
         frame_proyecto = tk.Frame(self.scroll_frame, bg="#2F2F3F", borderwidth=2, relief="groove", padx=10, pady=10)
         frame_proyecto.pack(side=tk.LEFT, padx=10, pady=10)
 
-        tk.Label(frame_proyecto, text=f"Proyecto: {os.path.basename(proyecto.get_name())}", bg="#2F2F3F", fg="white", font=("Arial", 14, "bold")).pack(anchor="w")
+        # Convertir el nombre del proyecto en un botón
+        proyecto_button = tk.Button(frame_proyecto, text=f"Project: {os.path.basename(proyecto.get_name())}", 
+                                    bg="#2F2F3F", fg="white", font=("Arial", 14, "bold"),
+                                    command=lambda: self.mostrar_interfaz_data(proyecto))
+        proyecto_button.pack(anchor="w")
 
         ingresos = proyecto.calcular_total_ingresos()
         gastos = proyecto.calcular_total_gastos()
         balance = proyecto.calcular_balance()
 
-        tk.Label(frame_proyecto, text=f"Ingresos Totales: {round(ingresos,2)} {Currency.current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
-        tk.Label(frame_proyecto, text=f"Gastos Totales: {round(gastos,2)} {Currency.current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
+        tk.Label(frame_proyecto, text=f"Total Income: {round(ingresos,2)} {Currency.current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
+        tk.Label(frame_proyecto, text=f"Total Expenses: {round(gastos,2)} {Currency.current_currency}", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(anchor="w")
         tk.Label(frame_proyecto, text=f"Balance: {round(balance,2)} {Currency.current_currency}", bg="#2F2F3F", fg="#4CAF50" if balance >= 0 else "#F44336", font=("Arial", 12, "bold")).pack(anchor="w")
 
         frame_proyecto.chart_label = None  # Etiqueta para el gráfico
@@ -217,7 +226,7 @@ class MainDashBoard:
             
 
     def toggle_grafico(self, proyecto: Proyecto, frame_proyecto, periodo='mensual'):
-        
+        """Show/Hide the chart."""
         if frame_proyecto.chart_label is None:
             ventana = Ventana(frame_proyecto, proyecto, periodo)
             frame_proyecto.btn_grafico.pack_forget()
@@ -235,25 +244,31 @@ class MainDashBoard:
             self.project_states[proyecto.get_name()]["chart_visible"] = False
 
     def cambiar_periodo(self, frame_proyecto):
-        """Cambiar el periodo y guardar en el estado."""
+        """Change the period and save it in the state."""
         frame_proyecto.chart_label.cambiar_periodo()
         # Guardar el periodo actual en project_states
         if frame_proyecto.chart_label and frame_proyecto.chart_label.periodo:
             nombre_proyecto = frame_proyecto.chart_label.proyecto.get_name()
             self.project_states[nombre_proyecto]["period"] = frame_proyecto.chart_label.periodo
-        frame_proyecto.chart_label.chart.destroy()
+        frame_proyecto.chart_label.eliminate_chart()
         frame_proyecto.chart_label.mostrar_chart()
         frame_proyecto.btn_cambiar_periodo.pack(pady=5)
 
     def quitar_grafico(self, proyecto, frame_proyecto):
+        """Remove the chart if it exists."""
         if frame_proyecto.chart_label:
-            frame_proyecto.chart_label.chart.destroy()
+            frame_proyecto.chart_label.eliminate_chart()
             frame_proyecto.chart_label = None
             frame_proyecto.btn_quitar_grafico.pack_forget()
             frame_proyecto.btn_cambiar_periodo.pack_forget()
             frame_proyecto.btn_grafico.pack(pady=5)
             self.project_states[proyecto.get_name()]["chart_visible"] = False
 
+    def mostrar_interfaz_data(self, proyecto):
+        """Mostrar la interfaz de datos del proyecto seleccionado."""
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        self.current_page = InterfazData(self.main_frame, proyecto)
 
     def on_closing(self):
         self.root.quit()

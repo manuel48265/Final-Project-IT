@@ -78,6 +78,10 @@ def cargar_datos_iniciales_projectos(db_name="contabilidad.db"):
         (100,'USD', 1012, 'pending', 'Servicios 2022', 'https://factura3.com', '2022-07-15', expense_dict['Servicios']),
         (20,'USD', 1013, 'payed', 'Taxi aeropuerto 2023', 'https://factura4.com', '2023-06-05', expense_dict['Transporte']),
         (60,'USD', 1014, 'pending', 'Pago gimnasio 2023', 'https://factura5.com', '2023-08-12', expense_dict['Comida']),
+        (200,'USD', 1015, 'pending', 'Compra muebles 2024', 'https://factura6.com', '2024-01-20', expense_dict['Comida']),
+        (200,'USD', 1015, 'pending', 'Compra muebles 2024', 'https://factura6.com', '2025-01-20', expense_dict['Comida']),
+        (150,'USD', 1016, 'payed', 'Pago alquiler 2024', 'https://factura7.com', '2025-02-01', expense_dict['Alquiler']),
+        (300,'USD', 1017, 'pending', 'Compra 2024', 'https://factura8.com', '2025-02-05', expense_dict['Comida']),
         # ...añade más datos si deseas...
     ]
     cursor.executemany("""
@@ -161,9 +165,6 @@ def cargar_datos_iniciales_gastos_genericos(db_name="genericos.db"):
 
     conn.commit()
     conn.close()
-
-
-
 
 if __name__ == "__main__":
     # Una sola base de datos contabilidad.db
