@@ -9,6 +9,8 @@ from GeneralExpenses import PaginaGastosGenerales
 from src.Currency import Currency
 from src.TotalExpenses import PaginaTransacciones
 from src.InterfazData import InterfazData  # Importar la nueva interfaz
+from src.Constants import CURRENCY_TYPES
+from src.ProjectManager import ProjectManager  # Importar la nueva clase
 
 class MainDashBoard:
     def __init__(self, root):
@@ -17,9 +19,8 @@ class MainDashBoard:
         self.root.geometry("1200x700")
         self.root.configure(bg="#1E1E2F")  # Fondo oscuro moderno
 
-        self.proyectos = []
+        self.project_manager = ProjectManager()
         self.current_page = None
-        self.project_states = {}
 
         self.setup_ui()
 
@@ -42,7 +43,7 @@ class MainDashBoard:
         tk.Label(sidebar, text="Currency:", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(pady=5)
         self.currency_var = tk.StringVar()
         self.currency_combobox = ttk.Combobox(sidebar, textvariable=self.currency_var, state="readonly", font=("Arial", 12))
-        self.currency_combobox['values'] = ["USD", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "CHF", "MYR", "JPY", "CNY", "LKR"]  # Ejemplo de monedas
+        self.currency_combobox['values'] = CURRENCY_TYPES  # Ejemplo de monedas
         self.currency_combobox.pack(pady=5)
         self.currency_combobox.bind("<<ComboboxSelected>>", self.cambiar_divisa)
 
@@ -50,7 +51,6 @@ class MainDashBoard:
         self.main_frame = tk.Frame(self.root, bg="#1E1E2F")
         self.main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        self.load_proyectos()
         self.mostrar_dashboard()
 
     def create_gradient_background(self):
@@ -90,16 +90,6 @@ class MainDashBoard:
         frame_nuevo_proyecto = tk.Frame(self.main_frame, bg="#1E1E2F", pady=10)
         frame_nuevo_proyecto.pack(fill=tk.X, padx=10)
 
-        #tk.Label(frame_nuevo_proyecto, text="Ruta DB:", bg="#1E1E2F", fg="white", font=("Arial", 12)).grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        #self.db_path_entry = tk.Entry(frame_nuevo_proyecto, width=30, font=("Arial", 12))
-        #self.db_path_entry.grid(row=0, column=1, padx=5, pady=5)
-
-        #tk.Label(frame_nuevo_proyecto, text="Google Drive:", bg="#1E1E2F", fg="white", font=("Arial", 12)).grid(row=0, column=2, padx=5, pady=5, sticky="w")
-        #self.drive_link_entry = tk.Entry(frame_nuevo_proyecto, width=30, font=("Arial", 12))
-        #self.drive_link_entry.grid(row=0, column=3, padx=5, pady=5)
-
-        #tk.Button(frame_nuevo_proyecto, text="Crear Proyecto", command=self.crear_proyecto, bg="#4CAF50", fg="white", font=("Arial", 12), relief=tk.FLAT).grid(row=0, column=4, padx=5, pady=5)
-
         # Frame para mostrar proyectos
         self.frame_proyectos = tk.Frame(self.main_frame, bg="#1E1E2F")
         self.frame_proyectos.pack(pady=10, fill=tk.BOTH, expand=True)
@@ -121,10 +111,6 @@ class MainDashBoard:
         self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.scroll_x.pack(side=tk.BOTTOM, fill=tk.X)
 
-        # Habilitar desplazamiento táctil
-        #self.canvas.bind_all("<Button-4>", self.scroll_horizontal)
-        #self.canvas.bind_all("<Button-5>", self.scroll_horizontal)
-
         self.mostrar_proyectos()
 
     def mostrar_gastos_generales(self):
@@ -138,52 +124,15 @@ class MainDashBoard:
         self.current_page = None
         for widget in self.main_frame.winfo_children():
             widget.destroy()
-        self.current_page = PaginaTransacciones(self.main_frame, self.proyectos)
-
-    def scroll_horizontal(self, event):
-        if event.num == 4:  # Desplazamiento hacia arriba
-            self.canvas.xview_scroll(-1, "units")
-        elif event.num == 5:  # Desplazamiento hacia abajo
-            self.canvas.xview_scroll(1, "units")
-
-    def crear_proyecto(self):
-        """Create a new project."""
-        db_path = self.db_path_entry.get()
-        drive_link = self.drive_link_entry.get()
-
-        if not db_path or not drive_link:
-            messagebox.showerror("Error", "Please fill in all the fields.")
-            return
-
-        if not os.path.exists(db_path):
-            messagebox.showerror("Error", "The database path doesn't exist.")
-            return
-
-        nuevo_proyecto = Proyecto(db_path, drive_link)
-        self.proyectos.append(nuevo_proyecto)
-        self.mostrar_proyecto(nuevo_proyecto)
-
-    def load_proyectos(self):
-        # Example projects
-        self.proyectos.append(Proyecto("Proyecto 1", 'contabilidad.db', 'https://drive.google.com/drive/folders/your_folder_id'))
-        self.proyectos.append(Proyecto("Proyecto 2", 'contabilidad.db', 'https://drive.google.com/drive/folders/your_folder_id'))
-        self.proyectos.append(Proyecto("Proyecto 3", 'contabilidad.db', 'https://drive.google.com/drive/folders/your_folder_id'))
-
-        # Inicializar estados de cada proyecto
-        for p in self.proyectos:
-            self.project_states[p.get_name()] = {
-                "chart_visible": False,
-                "period": None
-            }
+        self.current_page = PaginaTransacciones(self.main_frame, self.project_manager.proyectos)
 
     def mostrar_proyectos(self):
         """Display all projects."""
-        for proyecto in self.proyectos:
+        for proyecto in self.project_manager.proyectos:
             proyecto.set_fechas(None, None)
             self.mostrar_proyecto(proyecto)
 
     def mostrar_proyecto(self, proyecto):
-
         print(f"Showing project: {proyecto.get_name()}")
         frame_proyecto = tk.Frame(self.scroll_frame, bg="#2F2F3F", borderwidth=2, relief="groove", padx=10, pady=10)
         frame_proyecto.pack(side=tk.LEFT, padx=10, pady=10)
@@ -214,16 +163,14 @@ class MainDashBoard:
                                                       bg="#F44336", fg="white", font=("Arial", 12))
         frame_proyecto.btn_quitar_grafico.pack_forget()
 
-        if self.project_states[proyecto.get_name()].get("chart_visible", False):
-            periodo = self.project_states[proyecto.get_name()].get("period")
+        if self.project_manager.project_states[proyecto.get_name()].get("chart_visible", False):
+            periodo = self.project_manager.project_states[proyecto.get_name()].get("period")
             if periodo and frame_proyecto.chart_label:
                 frame_proyecto.chart_label.set_periodo(periodo)
             if periodo:
                 self.toggle_grafico(proyecto, frame_proyecto, periodo)
             else: 
                 self.toggle_grafico(proyecto, frame_proyecto)
-            # Restaurar el periodo si se había guardado
-            
 
     def toggle_grafico(self, proyecto: Proyecto, frame_proyecto, periodo='mensual'):
         """Show/Hide the chart."""
@@ -237,11 +184,11 @@ class MainDashBoard:
                                                           bg="#FFC107", fg="white", font=("Arial", 12))
             frame_proyecto.btn_cambiar_periodo.pack(pady=5)
             frame_proyecto.chart_label.mostrar_chart()
-            self.project_states[proyecto.get_name()]["chart_visible"] = True
+            self.project_manager.project_states[proyecto.get_name()]["chart_visible"] = True
 
         else:
             self.quitar_grafico(proyecto,frame_proyecto)
-            self.project_states[proyecto.get_name()]["chart_visible"] = False
+            self.project_manager.project_states[proyecto.get_name()]["chart_visible"] = False
 
     def cambiar_periodo(self, frame_proyecto):
         """Change the period and save it in the state."""
@@ -249,7 +196,7 @@ class MainDashBoard:
         # Guardar el periodo actual en project_states
         if frame_proyecto.chart_label and frame_proyecto.chart_label.periodo:
             nombre_proyecto = frame_proyecto.chart_label.proyecto.get_name()
-            self.project_states[nombre_proyecto]["period"] = frame_proyecto.chart_label.periodo
+            self.project_manager.project_states[nombre_proyecto]["period"] = frame_proyecto.chart_label.periodo
         frame_proyecto.chart_label.eliminate_chart()
         frame_proyecto.chart_label.mostrar_chart()
         frame_proyecto.btn_cambiar_periodo.pack(pady=5)
@@ -262,7 +209,7 @@ class MainDashBoard:
             frame_proyecto.btn_quitar_grafico.pack_forget()
             frame_proyecto.btn_cambiar_periodo.pack_forget()
             frame_proyecto.btn_grafico.pack(pady=5)
-            self.project_states[proyecto.get_name()]["chart_visible"] = False
+            self.project_manager.project_states[proyecto.get_name()]["chart_visible"] = False
 
     def mostrar_interfaz_data(self, proyecto):
         """Mostrar la interfaz de datos del proyecto seleccionado."""
@@ -279,3 +226,5 @@ if __name__ == "__main__":
     app = MainDashBoard(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
+
+    print("Fin del programa")

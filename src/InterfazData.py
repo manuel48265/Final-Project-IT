@@ -34,12 +34,16 @@ class InterfazData(tk.Frame):
         label_nombre = tk.Label(frame_nombre, text=f"Proyecto: {self.proyecto.name}", font=("Arial", 16))
         label_nombre.pack()
 
+        
         # Frame para mostrar el saldo total
         frame_saldo = tk.Frame(self, padx=10, pady=10)
         frame_saldo.pack(fill=tk.X)
         saldo_total = self.proyecto.obtener_saldo_total()
         label_saldo = tk.Label(frame_saldo, text=f"Saldo Total: {saldo_total:.2f} {Currency.current_currency}", font=("Arial", 16))
         label_saldo.pack()
+        self.label_saldo = label_saldo
+
+        
 
         # Frame para las fechas y botón de actualización
         frame_fechas = tk.Frame(self, padx=10, pady=10)
@@ -50,6 +54,24 @@ class InterfazData(tk.Frame):
         frame_fechas.grid_columnconfigure(2, weight=1)
         frame_fechas.grid_columnconfigure(3, weight=1)
 
+        # Frame para gráficos de gastos
+        frame_graficos_gastos = tk.Frame(self, padx=10, pady=10)
+        frame_graficos_gastos.pack(fill=tk.BOTH, expand=True)
+        self.frame_graficos_gastos = frame_graficos_gastos
+        self.crear_graficos_gastos(frame_graficos_gastos)
+
+        # Frame para fechas futuras pendientes y transacciones
+        frame_fechas_transacciones = tk.Frame(self, padx=10, pady=10)
+        frame_fechas_transacciones.pack(fill=tk.BOTH, expand=True)
+
+        # Frame para fechas futuras pendientes
+        frame_fechas_futuras = tk.Frame(frame_fechas_transacciones, padx=10, pady=10, width=600)
+        frame_fechas_futuras.pack(side=tk.LEFT, fill=tk.Y, expand=False)
+        frame_fechas_futuras.pack_propagate(False)
+        label_fechas_futuras = tk.Label(frame_fechas_futuras, text="Pagos Futuros Pendientes", font=("Arial", 14, "bold"))
+        label_fechas_futuras.pack()
+        self.mostrar_fechas_futuras(frame_fechas_futuras)
+
         tk.Label(frame_fechas, text="Fecha de Inicio:").grid(row=0, column=0, sticky=tk.E)
         self.fecha_inicio_entry = tk.Entry(frame_fechas)
         self.fecha_inicio_entry.grid(row=0, column=1, sticky=tk.W)
@@ -59,24 +81,121 @@ class InterfazData(tk.Frame):
         btn_actualizar = tk.Button(frame_fechas, text="Actualizar", command=self.actualizar_datos)
         btn_actualizar.grid(row=0, column=4, sticky=tk.W)
 
-        # Frame para gráficos
-        frame_graficos = tk.Frame(self, padx=10, pady=10)
-        frame_graficos.pack(fill=tk.BOTH, expand=True)
-        self.frame_graficos = frame_graficos
-        self.crear_graficos(frame_graficos)
-
         # Frame para transacciones
-        frame_transacciones = tk.Frame(self, padx=10, pady=10)
-        frame_transacciones.pack(fill=tk.BOTH, expand=True)
+        frame_transacciones = tk.Frame(frame_fechas_transacciones, padx=10, pady=10, height=200)
+        frame_transacciones.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        frame_transacciones.pack_propagate(False)
 
-        self.tree = ttk.Treeview(frame_transacciones, columns=list(self.columnas.keys()), show='headings')
+        self.tree = ttk.Treeview(frame_transacciones, columns=list(self.columnas.keys()), show='headings', height=8)
         for col, text in self.columnas.items():
             self.tree.heading(col, text=text, command=lambda _col=col: self.encabezado_click(_col))
+            if col in ["transaction_type", "amount", "currency", "payment_state", "date", "invoice_number"]:
+                self.tree.column(col, width=100)
 
-        self.tree.pack(expand=True, fill=tk.BOTH)
+        scrollbar = ttk.Scrollbar(frame_transacciones, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscroll=scrollbar.set)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
         self.tree.bind("<<TreeviewSelect>>", self.seleccionar_fila)
 
         self.actualizar_treeview("date")
+
+        # Frame para gráficos de ingresos
+        frame_graficos_ingresos = tk.Frame(self, padx=10, pady=10)
+        frame_graficos_ingresos.pack(fill=tk.BOTH, expand=True)
+        self.frame_graficos_ingresos = frame_graficos_ingresos
+        self.crear_graficos_ingresos(frame_graficos_ingresos)
+
+    def mostrar_fechas_futuras(self, frame):
+        fechas_futuras = self.proyecto.get_upcoming_payments()
+        for fecha in fechas_futuras:
+            label = tk.Label(frame, text=f"{fecha[0]}: {fecha[1]} {fecha[4]} - {fecha[2]}", font=("Arial", 12))
+            label.pack()
+
+    def crear_graficos_gastos(self, frame):
+        # Eliminar gráficos existentes
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+        # Gráfico de evolución de gastos
+        evolucion = self.proyecto.obtener_evolucion_gastos()
+        if evolucion:
+            meses = [fila[0] for fila in evolucion]
+            totales = [fila[1] for fila in evolucion]
+
+            fig, ax = plt.subplots(figsize=(5, 3))
+            bars_gastos = ax.bar(meses, totales, color='red')
+            ax.set_title(f'Evolución de los Gastos ({Currency.current_currency})')
+            ax.set_xlabel('Mes')
+            ax.set_ylabel(f'Total ({Currency.current_currency})')
+
+            canvas1 = FigureCanvasTkAgg(fig, master=frame)
+            canvas1.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Gráfico de distribución de gastos por tipo
+        gastos_por_tipo = self.proyecto.obtener_gastos_por_tipo()
+        if len(gastos_por_tipo) != 0:
+            tipos = [fila[0] for fila in gastos_por_tipo]
+            valores = [fila[1] for fila in gastos_por_tipo]
+
+            fig2, ax2 = plt.subplots(figsize=(5, 3))
+            ax2.pie(valores, labels=tipos, autopct='%1.1f%%')
+            ax2.set_title(f'Distribución de Gastos ({Currency.current_currency})')
+
+            canvas2 = FigureCanvasTkAgg(fig2, master=frame)
+            canvas2.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Tooltips
+        self.tooltip_var = [None]
+        if evolucion:
+            canvas1.mpl_connect("motion_notify_event", lambda event: self.show_tooltip(event, canvas1, bars_gastos, evolucion, frame, self.tooltip_var, "Gastos"))
+            canvas1.mpl_connect("figure_leave_event", lambda event: self.hide_tooltip(event, self.tooltip_var))
+
+        # Guardar referencias a los canvas para poder eliminarlos
+        self.canvases = [canvas1, canvas2] if evolucion else []
+
+    def crear_graficos_ingresos(self, frame):
+        # Eliminar gráficos existentes
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+        # Gráfico de evolución de los Ingresos
+        evolucion_ingresos = self.proyecto.obtener_evolucion_ingresos()
+        if evolucion_ingresos:
+            meses_ing = [fila[0] for fila in evolucion_ingresos]
+            totales_ing = [fila[1] for fila in evolucion_ingresos]
+
+            fig3, ax3 = plt.subplots(figsize=(5, 3))
+            bars_ingresos = ax3.bar(meses_ing, totales_ing, color='blue')
+            ax3.set_title(f'Evolución de los Ingresos ({Currency.current_currency})')
+            ax3.set_xlabel('Mes')
+            ax3.set_ylabel(f'Total ({Currency.current_currency})')
+
+            canvas3 = FigureCanvasTkAgg(fig3, master=frame)
+            canvas3.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Gráfico de distribución de Ingresos por tipo
+        ingresos_por_tipo = self.proyecto.obtener_ingresos_por_tipo()
+        if len(ingresos_por_tipo) != 0:
+            tipos_ing = [fila[0] for fila in ingresos_por_tipo]
+            valores_ing = [fila[1] for fila in ingresos_por_tipo]
+
+            fig4, ax4 = plt.subplots(figsize=(5, 3))
+            ax4.pie(valores_ing, labels=tipos_ing, autopct='%1.1f%%')
+            ax4.set_title(f'Distribución de Ingresos ({Currency.current_currency})')
+
+            canvas4 = FigureCanvasTkAgg(fig4, master=frame)
+            canvas4.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Tooltips
+        self.tooltip_var = [None]
+        if evolucion_ingresos:
+            canvas3.mpl_connect("motion_notify_event", lambda event: self.show_tooltip(event, canvas3, bars_ingresos, evolucion_ingresos, frame, self.tooltip_var, "Ingresos"))
+            canvas3.mpl_connect("figure_leave_event", lambda event: self.hide_tooltip(event, self.tooltip_var))
+
+        # Guardar referencias a los canvas para poder eliminarlos
+        self.canvases += [canvas3, canvas4] if evolucion_ingresos else []
 
     def actualizar_treeview(self, orden, ascendente=True):
         for row in self.tree.get_children():
@@ -232,7 +351,8 @@ class InterfazData(tk.Frame):
         fecha_fin = self.fecha_fin_entry.get()
         self.proyecto.set_fechas(fecha_inicio, fecha_fin)
         self.actualizar_treeview("date")
-        self.crear_graficos(self.frame_graficos)
+        self.crear_graficos_gastos(self.frame_graficos_gastos)
+        self.crear_graficos_ingresos(self.frame_graficos_ingresos)
 
     # Manejador de evento para cerrar la ventana
     def on_closing(self):
@@ -242,10 +362,15 @@ class InterfazData(tk.Frame):
         root.destroy()
         sys.exit()
 
+    def update_currency(self):
+        saldo_total = self.proyecto.obtener_saldo_total()
+        self.label_saldo.config(text=f"Saldo Total: {saldo_total:.2f} {Currency.current_currency}")
+        self.crear_graficos_gastos(self.frame_graficos_gastos)
+        self.crear_graficos_ingresos(self.frame_graficos_ingresos)
+
 # Ejecutar el programa
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("Gestión de Ingresos y Gastos")
 
     # Crear una instancia de la clase Proyecto (sin interfaz gráfica)
     proyecto_base = Proyecto('Contabilidad', 'contabilidad.db', 'https://drive.google.com/drive/folders/your_folder_id')

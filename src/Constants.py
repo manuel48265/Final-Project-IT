@@ -1,1 +1,1 @@
-CURRENCY_TYPES = ["USD", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "CHF", "MYR", "JPY", "CNY", "LKR"]
+CURRENCY_TYPES = ["USD", "PLN", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "CHF", "MYR", "JPY", "CNY", "LKR"]
