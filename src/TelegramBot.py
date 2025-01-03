@@ -1,46 +1,185 @@
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Updater
 from telegram.ext import CallbackContext
 import asyncio
+from datetime import datetime, date, timedelta
+import time
+from threading import Thread
+import os
+import threading
+import signal
+
+
 
 TOKEN = '7835632666:AAF6n515HqQN8soWdEQTcXhlPVSHSy5DSGU'
 
-# Diccionario para almacenar los IDs de chat de los usuarios
-user_chat_ids = {}
+class TelegramBot:
+    def __init__(self, shared_data):
+        self.shared_data = shared_data
+        self.user_chat_ids = {}
+        self.user_notifications = {}  # Mapa con clave usuario y valor (bool, str, datetime)
+        self.notify_flag = asyncio.Event()
+        self.last_message_update = None
+        self.payment_message = None
+        self.app = None  # Añadir atributo de clase para la app
+        self.pid = None
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.effective_chat.id
-    user_chat_ids[update.effective_user.username] = chat_id
-    await update.message.reply_text('Hola! Usa /notify para recibir una notificación.')
+    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        chat_id = update.effective_chat.id
+        self.user_chat_ids[update.effective_user.username] = chat_id
+        self.user_notifications[update.effective_user.username] = (False, "días", None)
+        await update.message.reply_text('Hola! Usa /help para recibir mas información.')
 
-async def notify(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text('Esta es tu notificación!')
+    async def notify(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        username = update.effective_user.username
+        if username in self.user_notifications:
+            await update.message.reply_text('Introduce /horas /dias o /semanas para configurar el intervalo de notificaciones.')
+            await update.message.reply_text('Por defecto se configura cada día.')
 
-async def send_custom_message(username: str, message: str, app) -> None:
-    if username in user_chat_ids:
-        chat_id = user_chat_ids[username]
-        await app.bot.send_message(chat_id=chat_id, text=message)
-    else:
-        print(f"Usuario {username} no encontrado.")
+            self.user_notifications[username] = (True, "dias", None)
+        else:
+            await update.message.reply_text('Usuario no encontrado.')
 
-async def send_message_to_all(context: CallbackContext) -> None:
-    for username, chat_id in user_chat_ids.items():
-        await context.bot.send_message(chat_id=chat_id, text="Mensaje automático cada 20 segundos")
+    async def notify_hours(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        username = update.effective_user.username
+        if username in self.user_notifications:
+            self.user_notifications[username] = (True, "horas", None)
+            await update.message.reply_text('Notificaciones configuradas para cada hora.')
+        else:
+            await update.message.reply_text('Usuario no encontrado.')
 
-def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("notify", notify))
+    async def notify_days(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        username = update.effective_user.username
+        if username in self.user_notifications:
+            self.user_notifications[username] = (True, "dias", None)
+            await update.message.reply_text('Notificaciones configuradas para cada día.')
+        else:
+            await update.message.reply_text('Usuario no encontrado.')
 
-    # Asegúrate de que JobQueue esté configurado
-    job_queue = app.job_queue
-    if job_queue is not None:
-        job_queue.run_repeating(send_message_to_all, interval=20, first=0)
-    else:
-        print("JobQueue no está configurado correctamente.")
+    async def notify_weeks(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        username = update.effective_user.username
+        if username in self.user_notifications:
+            self.user_notifications[username] = (True, "semanas", None)
+            await update.message.reply_text('Notificaciones configuradas para cada semana.')
+        else:
+            await update.message.reply_text('Usuario no encontrado.')
 
-    app.run_polling()
+    async def not_notified(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        username = update.effective_user.username
+        
+        if username in self.user_notifications:
+            self.user_notifications[username] = (False, "días", None)
+            await update.message.reply_text('Has dejado de recibir notificaciones.')
+        else:
+            await update.message.reply_text('Usuario no encontrado.')
 
-if __name__ == '__main__':
-    main()
+    async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        help_text = (
+            "/start - Iniciar el bot\n"
+            "/notify - Configurar notificaciones\n"
+                "\t /horas - Notificar cada hora\n"
+                "\t /dias - Notificar cada día\n"
+                "\t /semanas - Notificar cada semana\n"
+            "/not_notified - Detener notificaciones\n"
+            "/help - Mostrar este mensaje de ayuda"
+        )
+        await update.message.reply_text(help_text)
+
+    async def send_custom_message(self, username: str, message: str, app) -> None:
+        if username in self.user_chat_ids:
+            chat_id = self.user_chat_ids[username]
+            await app.bot.send_message(chat_id=chat_id, text=message)
+        else:
+            print(f"Usuario {username} no encontrado.")
+
+    async def send_message_to_all(self, context: CallbackContext) -> None:
+        current_time = datetime.now()
+        if self.user_notifications is None:
+            return
+        for username, (notify, interval, last_notified) in self.user_notifications.items():
+            if notify:
+                if interval == "horas" and (last_notified is None or (current_time - last_notified) >= timedelta(seconds=10)):
+                    await self.send_payment_message_to_user(username, context)
+                    self.user_notifications[username] = (True, "horas", current_time)
+                elif interval == "dias" and (last_notified is None or (current_time - last_notified) >= timedelta(days=1)):
+                    await self.send_payment_message_to_user(username, context)
+                    self.user_notifications[username] = (True, "dias", current_time)
+                elif interval == "semanas" and (last_notified is None or (current_time - last_notified) >= timedelta(weeks=1)):
+                    await self.send_payment_message_to_user(username, context)
+                    self.user_notifications[username] = (True, "semanas", current_time)
+
+    async def get_payment_message(self) -> None:
+        print("Getting payment message in bot")
+        lock = self.shared_data["lock"]
+        with lock:
+            msg = self.shared_data["payment_message"]
+        print(msg)
+        return msg
+
+    def set_payment_message(self, message: str) -> None:
+        print("Setting payment message")
+        lock = self.shared_data["lock"]
+        with lock:
+            self.shared_data["payment_message"] = message
+        self.last_message_update = datetime.now()
+        print("Payment message set")
+
+    async def send_payment_message_to_user(self, username: str, context: CallbackContext) -> None:
+        if username in self.user_chat_ids:
+            payment_msg = await self.get_payment_message()
+            if not payment_msg:
+                await context.bot.send_message(chat_id=self.user_chat_ids[username], text="Ha habido un problema al obtener los pagos pendientes.")
+            elif payment_msg == "":
+                await context.bot.send_message(chat_id=self.user_chat_ids[username], text="NO HAY PAGOS PENDIENTES")
+            else:
+                await context.bot.send_message(chat_id=self.user_chat_ids[username], text=payment_msg)
+        else:
+            print(f"Usuario {username} no encontrado.")
+
+    def activate_notify_flag(self):
+        """Activar el flag de notificación."""
+        print("Activating notify flag")
+        self.notify_flag.set()
+
+    def deactivate_notify_flag(self):
+        """Desactivar el flag de notificación."""
+        self.notify_flag.clear()
+
+    def stop(self):
+        print(f"Enviando señal personalizada (SIGUSR1) al proceso {self.pid}")
+        os.kill(self.pid, signal.SIGUSR1)  # Envía la señal SIGUSR1 al proceso actual
+
+
+    def start_bot(self):
+        self.pid = os.getpid()
+        self.app = ApplicationBuilder().token(TOKEN).build()
+        self.app.add_handler(CommandHandler("start", self.start))
+        self.app.add_handler(CommandHandler("notify", self.notify))
+        self.app.add_handler(CommandHandler("not_notified", self.not_notified))
+        self.app.add_handler(CommandHandler("help", self.help))
+        self.app.add_handler(CommandHandler("horas", self.notify_hours))
+        self.app.add_handler(CommandHandler("dias", self.notify_days))
+        self.app.add_handler(CommandHandler("semanas", self.notify_weeks))
+
+        # Asegúrate de que JobQueue esté configurado
+        job_queue = self.app.job_queue
+        if job_queue is not None:
+            job_queue.run_repeating(self.send_message_to_all, interval=10, first=0)
+        else:
+            print("JobQueue no está configurado correctamente.")
+
+        print("hola ?")
+        # Ejecuta el bot de Telegram
+        self.app.run_polling(stop_signals=[signal.SIGINT, signal.SIGTERM, signal.SIGUSR1])
+
+
+if __name__ == "__main__":
+    bot_app = TelegramBot()
+    bot_app.start_bot()
+
+
+
+
+
+
 

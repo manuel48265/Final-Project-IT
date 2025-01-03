@@ -102,9 +102,13 @@ class Proyecto:
         if self.fecha_inicio and self.fecha_fin:
             consulta += f" WHERE g.date BETWEEN '{self.fecha_inicio}' AND '{self.fecha_fin}'"
         df = pd.read_sql_query(consulta, self.conexion)
-        df['amount'] = df.apply(lambda row: Currency(row['amount'], row['currency']).convert(), axis=1)
-        df_grouped = df.groupby('type_name')['amount'].sum().reset_index()
-        return df_grouped.values.tolist()
+        
+        if df.empty:
+            return []
+        else:
+            df['amount'] = df.apply(lambda row: Currency(row['amount'], row['currency']).convert(), axis=1)
+            df_grouped = df.groupby('type_name')['amount'].sum().reset_index()
+            return df_grouped.values.tolist()
 
     def obtener_evolucion_gastos(self):
         consulta = """
@@ -223,12 +227,12 @@ class Proyecto:
         pagos_pendientes = cursor.fetchall()
         conn.close()
         return pagos_pendientes
-
-    def obtener_fechas_futuras_pendientes(self, head=5):
+    
+    def get_upcoming_payments(self, head=5):
         conn = self._connect()
         cursor = conn.cursor()
         query = """
-            SELECT concept, amount, date, invoice_number
+            SELECT concept, amount, date, invoice_number, currency
             FROM gastos
             WHERE payment_state = 'pending'
               AND date >= DATE('now')
@@ -330,7 +334,7 @@ class Ventana:
         lbl_info = Label(self.parent, text="These are the nearest upcoming payments:", fg="black")
         lbl_info.pack()
 
-        pagos = self.proyecto.obtener_fechas_futuras_pendientes()
+        pagos = self.proyecto.get_upcoming_payments()
         for pago in pagos:
             lbl = Label(self.parent, text=f"{pago[0]}: Deadline: {pago[2]} Invoice number: {pago[3]}", fg="blue", cursor="hand2")
             lbl.pack()
