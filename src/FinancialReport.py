@@ -11,7 +11,6 @@ import re
 
 GOOGLE_API_KEY = "AIzaSyAX25KeA27dvXLmJcJegsk7sQAFVO7DBE8"
 client = genai.Client(api_key=GOOGLE_API_KEY)
-
 MODEL_ID = "models/gemini-2.0-flash-exp"
 
 def cargar_datos(archivo):

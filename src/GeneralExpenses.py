@@ -272,7 +272,6 @@ class PaginaGastosGenerales:
         self.invoice_entry.delete(0, tk.END)
         self.currency_combobox.set("")
 
-    
 
     def update_currency(self):
         """Actualizar la vista cuando se cambia la moneda"""
