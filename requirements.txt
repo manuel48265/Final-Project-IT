@@ -1,0 +1,7 @@
+pandas==2.2.3
+google-genai==0.3.0
+weasyprint==63.1
+python-telegram-bot==21.10
+matplotlib==3.9.1
+Pillow==10.4.0
+tk==0.1.0
