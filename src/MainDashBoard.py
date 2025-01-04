@@ -11,6 +11,7 @@ from src.TotalExpenses import PaginaTransacciones
 from src.InterfazData import InterfazData  # Importar la nueva interfaz
 from src.Constants import CURRENCY_TYPES
 from src.ProjectManager import ProjectManager  # Importar la nueva clase
+from src.ChatBot import ChatBotFrame  # Importar la clase ChatBotFrame
 
 class MainDashBoard:
     def __init__(self, root):
@@ -38,6 +39,7 @@ class MainDashBoard:
         tk.Button(sidebar, text="General Costs", bg="#3F3F4F", fg="white", font=("Arial", 12), relief=tk.FLAT, command=self.mostrar_gastos_generales).pack(fill=tk.X, pady=5, padx=10)
         tk.Button(sidebar, text="Total Costs", bg="#3F3F4F", fg="white", font=("Arial", 12),
                   relief=tk.FLAT, command=self.mostrar_total_expenses).pack(fill=tk.X, pady=5, padx=10)
+        tk.Button(sidebar, text="ChatBot", bg="#3F3F4F", fg="white", font=("Arial", 12), relief=tk.FLAT, command=self.mostrar_chatbot).pack(fill=tk.X, pady=5, padx=10)
 
         # Combobox para seleccionar la divisa
         tk.Label(sidebar, text="Currency:", bg="#2F2F3F", fg="white", font=("Arial", 12)).pack(pady=5)
@@ -216,6 +218,13 @@ class MainDashBoard:
         for widget in self.main_frame.winfo_children():
             widget.destroy()
         self.current_page = InterfazData(self.main_frame, proyecto)
+
+    def mostrar_chatbot(self):
+        """Mostrar el frame del ChatBot."""
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        self.current_page = ChatBotFrame(self.main_frame)
+        self.current_page.pack(fill=tk.BOTH, expand=True)
 
     def on_closing(self):
         self.root.quit()
