@@ -3,10 +3,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Updat
 from telegram.ext import CallbackContext
 import asyncio
 from datetime import datetime, date, timedelta
-import time
 from threading import Thread
-import os
-import threading
 import signal
 
 
@@ -14,7 +11,7 @@ import signal
 TOKEN = '7835632666:AAF6n515HqQN8soWdEQTcXhlPVSHSy5DSGU'
 
 class TelegramBot:
-    def __init__(self, shared_data):
+    def __init__(self, shared_data, condition):
         self.shared_data = shared_data
         self.user_chat_ids = {}
         self.user_notifications = {}  # Mapa con clave usuario y valor (bool, str, datetime)
@@ -22,7 +19,7 @@ class TelegramBot:
         self.last_message_update = None
         self.payment_message = None
         self.app = None  # Añadir atributo de clase para la app
-        self.pid = None
+        self.condition = condition
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id
@@ -94,27 +91,43 @@ class TelegramBot:
 
     async def send_message_to_all(self, context: CallbackContext) -> None:
         current_time = datetime.now()
+        
+
         if self.user_notifications is None:
             return
-        for username, (notify, interval, last_notified) in self.user_notifications.items():
-            if notify:
-                if interval == "horas" and (last_notified is None or (current_time - last_notified) >= timedelta(seconds=10)):
-                    await self.send_payment_message_to_user(username, context)
-                    self.user_notifications[username] = (True, "horas", current_time)
-                elif interval == "dias" and (last_notified is None or (current_time - last_notified) >= timedelta(days=1)):
-                    await self.send_payment_message_to_user(username, context)
-                    self.user_notifications[username] = (True, "dias", current_time)
-                elif interval == "semanas" and (last_notified is None or (current_time - last_notified) >= timedelta(weeks=1)):
-                    await self.send_payment_message_to_user(username, context)
-                    self.user_notifications[username] = (True, "semanas", current_time)
+        else:
+            payment_msg = await self.get_payment_message()
+            for username, (notify, interval, last_notified) in self.user_notifications.items():
+                if notify:
+                    if interval == "horas" and (last_notified is None or (current_time - last_notified) >= timedelta(seconds=10)):
+                        await self.send_payment_message_to_user(username, context, payment_msg)
+                        self.user_notifications[username] = (True, "horas", current_time)
+                    elif interval == "dias" and (last_notified is None or (current_time - last_notified) >= timedelta(days=1)):
+                        await self.send_payment_message_to_user(username, context, payment_msg)
+                        self.user_notifications[username] = (True, "dias", current_time)
+                    elif interval == "semanas" and (last_notified is None or (current_time - last_notified) >= timedelta(weeks=1)):
+                        await self.send_payment_message_to_user(username, context)
+                        self.user_notifications[username] = (True, "semanas", current_time, payment_msg)
 
     async def get_payment_message(self) -> None:
-        print("Getting payment message in bot")
-        lock = self.shared_data["lock"]
-        with lock:
-            msg = self.shared_data["payment_message"]
-        print(msg)
-        return msg
+         with self.condition:
+            # Notificar a la interfaz que se requiere un mensaje
+            self.condition.notify_all()
+            print("Bot esperando mensaje...")
+
+            # Esperar hasta que el mensaje esté disponible
+            self.condition.wait_for(lambda: self.shared_data["payment_message"] != "")
+
+            # Obtener el mensaje
+            lock = self.shared_data["lock"]
+            lock.acquire()
+            try:
+                mensaje = self.shared_data["payment_message"]
+                self.shared_data["payment_message"] = ""  # Limpiar el mensaje después de procesarlo
+            finally:
+                lock.release()
+
+            return mensaje
 
     def set_payment_message(self, message: str) -> None:
         print("Setting payment message")
@@ -124,9 +137,8 @@ class TelegramBot:
         self.last_message_update = datetime.now()
         print("Payment message set")
 
-    async def send_payment_message_to_user(self, username: str, context: CallbackContext) -> None:
+    async def send_payment_message_to_user(self, username: str, context: CallbackContext, payment_msg: str) -> None:
         if username in self.user_chat_ids:
-            payment_msg = await self.get_payment_message()
             if not payment_msg:
                 await context.bot.send_message(chat_id=self.user_chat_ids[username], text="Ha habido un problema al obtener los pagos pendientes.")
             elif payment_msg == "":
@@ -136,22 +148,7 @@ class TelegramBot:
         else:
             print(f"Usuario {username} no encontrado.")
 
-    def activate_notify_flag(self):
-        """Activar el flag de notificación."""
-        print("Activating notify flag")
-        self.notify_flag.set()
-
-    def deactivate_notify_flag(self):
-        """Desactivar el flag de notificación."""
-        self.notify_flag.clear()
-
-    def stop(self):
-        print(f"Enviando señal personalizada (SIGUSR1) al proceso {self.pid}")
-        os.kill(self.pid, signal.SIGUSR1)  # Envía la señal SIGUSR1 al proceso actual
-
-
     def start_bot(self):
-        self.pid = os.getpid()
         self.app = ApplicationBuilder().token(TOKEN).build()
         self.app.add_handler(CommandHandler("start", self.start))
         self.app.add_handler(CommandHandler("notify", self.notify))
@@ -168,14 +165,15 @@ class TelegramBot:
         else:
             print("JobQueue no está configurado correctamente.")
 
-        print("hola ?")
         # Ejecuta el bot de Telegram
         self.app.run_polling(stop_signals=[signal.SIGINT, signal.SIGTERM, signal.SIGUSR1])
 
-
 if __name__ == "__main__":
     bot_app = TelegramBot()
-    bot_app.start_bot()
+    try:
+        bot_app.start_bot()
+    except (KeyboardInterrupt, SystemExit):
+        bot_app.stop_bot()
 
 
 
