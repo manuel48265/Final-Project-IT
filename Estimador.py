@@ -65,10 +65,10 @@ def generate_project_plan(tasks_data, historical_data, time_unit, start_date, ou
     start_date = datetime.strptime(start_date, "%Y-%m-%d")
 
     # Ensure required columns exist
-    required_columns = ["Activity", "Description", "Dependencies", "Technology", "Roles"]
-    for col in required_columns:
-        if col not in tasks_data.columns:
-            raise ValueError(f"Missing required column: {col}")
+    required_columns = {"Activity", "Description", "Dependencies", "Technology", "Roles"}
+    missing_columns = required_columns - set(tasks_data.columns)
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
 
     # Convert time unit to days
     time_unit_map = {"days": 1, "weeks": 7, "months": 30}
@@ -77,42 +77,26 @@ def generate_project_plan(tasks_data, historical_data, time_unit, start_date, ou
     unit_multiplier = time_unit_map[time_unit]
 
     # Add start, end date, and cost columns
-    tasks_data["Start"] = None
-    tasks_data["End"] = None
-    tasks_data["Optimistic"] = None
-    tasks_data["Most Likely"] = None
-    tasks_data["Pessimistic"] = None
+    new_columns = ["Start", "End", "Optimistic", "Most Likely", "Pessimistic"]
+    tasks_data[new_columns] = None
 
     # Dictionary to track the end date of each activity
     activity_end_dates = {}
 
     for index, row in tasks_data.iterrows():
-        # Estimate durations
         estimations = estimate_task_duration(row["Description"], row["Technology"], historical_data)
-        tasks_data.at[index, "Optimistic"] = estimations["Optimistic"]
-        tasks_data.at[index, "Most Likely"] = estimations["Most Likely"]
-        tasks_data.at[index, "Pessimistic"] = estimations["Pessimistic"]
-
-        # Get dependencies
-        dependencies = row["Dependencies"]
-
-        # Calculate start date
-        if pd.isna(dependencies):
-            # No dependencies: start at the project start date
-            start = start_date
-        else:
-            # Dependencies: start after the latest end date of dependencies
-            dep_activities = [dep.strip() for dep in dependencies.split(",")]
-            dep_end_dates = [activity_end_dates[dep] for dep in dep_activities]
-            start = max(dep_end_dates)
-
+        
+        # Calculate start date based on dependencies
+        start = (start_date if pd.isna(row["Dependencies"]) else 
+                 max(activity_end_dates[dep.strip()] for dep in row["Dependencies"].split(",")))
+        
         # Calculate end date
-        duration = estimations["Most Likely"] * unit_multiplier
-        end = start + timedelta(days=duration)
-
-        # Update DataFrame
-        tasks_data.at[index, "Start"] = start
-        tasks_data.at[index, "End"] = end
+        end = start + timedelta(days=estimations["Most Likely"] * unit_multiplier)
+        
+        # Update all values at once
+        tasks_data.loc[index, ["Start", "End", "Optimistic", "Most Likely", "Pessimistic"]] = [
+            start, end, estimations["Optimistic"], estimations["Most Likely"], estimations["Pessimistic"]
+        ]
 
         # Track the end date for the current activity
         activity_end_dates[row["Activity"]] = end
