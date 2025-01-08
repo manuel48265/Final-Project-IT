@@ -77,13 +77,13 @@ class Proyecto:
         return self.cursor.fetchall()
 
     def obtener_saldo_total(self):
-        """Obtener el saldo total con conversión de moneda."""
+        """Get the total balance with currency conversion."""
         consulta = """
-            SELECT transaction_type, amount, currency
+            SELECT transaction_type, amount, currency, date
             FROM (
-                SELECT 'expense' as transaction_type, amount, currency FROM gastos
+                SELECT 'expense' as transaction_type, amount,date, currency FROM gastos
                 UNION ALL
-                SELECT 'income' as transaction_type, amount, currency FROM ingresos
+                SELECT 'income' as transaction_type, amount,date, currency FROM ingresos
             )
         """
         if self.fecha_inicio and self.fecha_fin:
@@ -95,7 +95,7 @@ class Proyecto:
 
     def obtener_gastos_por_tipo(self):
         consulta = """
-            SELECT et.type_name, g.amount, g.currency
+            SELECT et.type_name, g.amount, g.currency, g.date
             FROM gastos g
             LEFT JOIN expense_types et ON g.expense_type = et.val
         """
@@ -125,9 +125,9 @@ class Proyecto:
         return []
 
     def obtener_ingresos_por_tipo(self):
-        """Obtener la suma de los ingresos agrupados por tipo."""
+        """Get the sum of income grouped by type."""
         consulta = """
-            SELECT it.type_name, i.amount, i.currency
+            SELECT it.type_name, i.amount, i.currency, i.date
             FROM ingresos i
             JOIN income_types it ON i.income_type = it.val
         """
@@ -142,7 +142,7 @@ class Proyecto:
             return df
 
     def obtener_evolucion_ingresos(self):
-        """Obtener la evolución mensual de ingresos."""
+        """Get the monthly evolution of income."""
         consulta = """
             SELECT strftime('%Y-%m', date) as mes, amount, currency
             FROM ingresos
@@ -178,7 +178,7 @@ class Proyecto:
         df_ingresos['date'] = pd.to_datetime(df_ingresos['date'])
         df_gastos['date'] = pd.to_datetime(df_gastos['date'])
 
-        # Convertir a la moneda actual
+        # Convert to the current currency
         df_ingresos['amount'] = round(df_ingresos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1), 2)
         df_gastos['amount'] = round(df_gastos.apply(lambda x: Currency(x['amount'], x['currency']).convert(), axis=1), 2)
 
@@ -199,19 +199,19 @@ class Proyecto:
 
         fig = Figure(figsize=(8, 6))
         ax = fig.add_subplot(111)
-        width = 0.35  # Ancho de las barras
+        width = 0.35  # Width of the bars
 
-        # Crear las posiciones para las barras
+        # Create positions for the bars
         pos = range(len(df_agg))
 
-        # Ploteo de las barras de ingresos y gastos
+        # Plot income and expense bars
         bars1 = ax.bar([p - width/2 for p in pos], df_agg['Ingresos'], width=width, label='Ingresos', color='green')
         bars2 = ax.bar([p + width/2 for p in pos], df_agg['Gastos'], width=width, label='Gastos', color='red')
 
-        # Configuración del gráfico
-        ax.set_title(f'Resumen de {periodo}')
-        ax.set_xlabel('Fecha')
-        ax.set_ylabel('Monto')
+        # Chart configuration
+        ax.set_title(f'Summary of {periodo}')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Amount')
         ax.set_xticks(pos)
         ax.set_xticklabels(df_agg.index)
         ax.legend()
@@ -242,43 +242,185 @@ class Proyecto:
         fechas_futuras = cursor.fetchall()
         conn.close()
         return fechas_futuras[:head]
+    
+    def get_accurate_data(self):
+        conn = self._connect()
+        cursor = conn.cursor()
+        
+        # Get all available years and months in the database
+        cursor.execute("SELECT DISTINCT strftime('%Y-%m', date) as period FROM ingresos UNION SELECT DISTINCT strftime('%Y-%m', date) as period FROM gastos ORDER BY period")
+        periods = cursor.fetchall()
+        
+        data_str = ""
+        
+        for period in periods:
+            year, month = period[0].split('-')
+            data_str += f"{year}, {month}\n"
+            
+            # Get total income for the month and year
+            cursor.execute(f"SELECT amount, currency FROM ingresos WHERE strftime('%Y-%m', date) = '{period[0]}'")
+            ingresos = cursor.fetchall()
+            data_str += "-Total Income:\n"
+            if ingresos:
+                total_ingresos = round(sum(Currency(ingreso[0], ingreso[1]).convert() for ingreso in ingresos), 2)
+                data_str += f"  {total_ingresos} {Currency.current_currency}\n"
+            else:
+                data_str += "  None\n"
+            
+            # Get total expenses for the month and year
+            cursor.execute(f"SELECT amount, currency FROM gastos WHERE strftime('%Y-%m', date) = '{period[0]}'")
+            gastos = cursor.fetchall()
+            data_str += "-Total Expenses:\n"
+            if gastos:
+                total_gastos = round(sum(Currency(gasto[0], gasto[1]).convert() for gasto in gastos), 2)
+                data_str += f"  {total_gastos} {Currency.current_currency}\n"
+            else:
+                data_str += "  None\n"
+            
+            # Get income distribution by type
+            cursor.execute(f"""
+                SELECT it.type_name, SUM(i.amount), i.currency
+                FROM ingresos i
+                JOIN income_types it ON i.income_type = it.val
+                WHERE strftime('%Y-%m', i.date) = '{period[0]}'
+                GROUP BY it.type_name, i.currency
+            """)
+            income_distribution = cursor.fetchall()
+            data_str += "-Income Distribution:\n"
+            if income_distribution:
+                for dist in income_distribution:
+                    amount = round(Currency(dist[1], dist[2]).convert(), 2)
+                    data_str += f"  {dist[0]}: {amount} {Currency.current_currency}\n"
+            else:
+                data_str += "  None\n"
+            
+            # Get expense distribution by type
+            cursor.execute(f"""
+                SELECT et.type_name, SUM(g.amount), g.currency
+                FROM gastos g
+                LEFT JOIN expense_types et ON g.expense_type = et.val
+                WHERE strftime('%Y-%m', g.date) = '{period[0]}'
+                GROUP BY et.type_name, g.currency
+            """)
+            expense_distribution = cursor.fetchall()
+            data_str += "-Expenses Distribution:\n"
+            if expense_distribution:
+                for dist in expense_distribution:
+                    amount = round(Currency(dist[1], dist[2]).convert(), 2)
+                    data_str += f"  {dist[0]}: {amount} {Currency.current_currency}\n"
+            else:
+                data_str += "  None\n"
+        
+        conn.close()
+        return data_str
+    
+    def get_basic_data(self):
+        conn = self._connect()
+        cursor = conn.cursor()
+        
+        # Get all available years in the database
+        cursor.execute("SELECT DISTINCT strftime('%Y', date) as year FROM ingresos UNION SELECT DISTINCT strftime('%Y', date) as year FROM gastos ORDER BY year")
+        years = cursor.fetchall()
+        
+        data_str = ""
+        
+        for year in years:
+            year = year[0]
+            data_str += f"{year}:\n"
+            
+            # Get total income for the year
+            cursor.execute(f"SELECT amount, currency FROM ingresos WHERE strftime('%Y', date) = '{year}'")
+            ingresos = cursor.fetchall()
+            data_str += "-Total Incomes:\n"
+            if ingresos:
+                total_ingresos = round(sum(Currency(ingreso[0], ingreso[1]).convert() for ingreso in ingresos), 2)
+                data_str += f"  {total_ingresos} {Currency.current_currency}\n"
+            else:
+                data_str += "  None\n"
+            
+            # Get total expenses for the year
+            cursor.execute(f"SELECT amount, currency FROM gastos WHERE strftime('%Y', date) = '{year}'")
+            gastos = cursor.fetchall()
+            data_str += "-Total Expenses:\n"
+            if gastos:
+                total_gastos = round(sum(Currency(gasto[0], gasto[1]).convert() for gasto in gastos), 2)
+                data_str += f"  {total_gastos} {Currency.current_currency}\n"
+            else:
+                data_str += "  None\n"
+            
+            # Get income distribution by type
+            cursor.execute(f"""
+                SELECT it.type_name, SUM(i.amount), i.currency
+                FROM ingresos i
+                JOIN income_types it ON i.income_type = it.val
+                WHERE strftime('%Y', i.date) = '{year}'
+                GROUP BY it.type_name, i.currency
+            """)
+            income_distribution = cursor.fetchall()
+            data_str += "-Income Distribution:\n"
+            if income_distribution:
+                for dist in income_distribution:
+                    amount = round(Currency(dist[1], dist[2]).convert(), 2)
+                    data_str += f"  {dist[0]} {amount} {Currency.current_currency}\n"
+            else:
+                data_str += "  None\n"
+            
+            # Get expense distribution by type
+            cursor.execute(f"""
+                SELECT et.type_name, SUM(g.amount), g.currency
+                FROM gastos g
+                LEFT JOIN expense_types et ON g.expense_type = et.val
+                WHERE strftime('%Y', g.date) = '{year}'
+                GROUP BY et.type_name, g.currency
+            """)
+            expense_distribution = cursor.fetchall()
+            data_str += "-Expenses Distribution:\n"
+            if expense_distribution:
+                for dist in expense_distribution:
+                    amount = round(Currency(dist[1], dist[2]).convert(), 2)
+                    data_str += f"  {dist[0]} {amount} {Currency.current_currency}\n"
+            else:
+                data_str += "  None\n"
+        
+        conn.close()
+        return data_str
 
 class Ventana:
-    def __init__(self, parent, proyecto : Proyecto, periodo='mensual'):
-        self.parent = parent  # Ajuste para usar el frame recibido
+    def __init__(self, parent, proyecto : Proyecto, period='mensual'):
+        self.parent = parent  # Adjustment to use the received frame
         self.proyecto = proyecto
         self.tooltip = None
-        self.periodo = periodo
+        self.period = period
         self.chart = None
         self.lbl_info = None
 
-    def cambiar_periodo(self):
-        if self.periodo == 'mensual':
-            self.periodo = 'anual'
+    def change_period(self):
+        if self.period == 'mensual':
+            self.period = 'anual'
         else:
-            self.periodo = 'mensual'
+            self.period = 'mensual'
 
-    def set_periodo(self, periodo):
-        self.periodo = periodo
+    def set_period(self, periodo):
+        self.period = periodo
 
-    def mostrar_chart(self):
+    def show_chart(self):
         
-        fig, bars, data = self.proyecto.generar_chart(periodo=self.periodo)
+        fig, bars, data = self.proyecto.generar_chart(periodo=self.period)
         canvas = FigureCanvasTkAgg(fig, master=self.parent)
         canvas.draw()
-        canvas.get_tk_widget().pack()  # Se muestra debajo del botón en el mismo frame
+        canvas.get_tk_widget().pack()  # Displayed below the button in the same frame
 
-        # Separa las barras en dos listas: barras de ingresos y barras de gastos
+        # Separate the bars into two lists: income bars and expense bars
         n_rows = len(data)
         bars_ingresos = bars[:n_rows]
         bars_gastos = bars[n_rows:]
 
         def show_tooltip(event: MouseEvent):
             if event.inaxes:
-                # Detectar las barras de ingresos
+                # Detect income bars
                 for i, rect in enumerate(bars_ingresos):
                     if rect.contains(event)[0]:
-                        # Obtener la fila correspondiente del DataFrame
+                        # Get the corresponding row from the DataFrame
                         row = data.iloc[i]
                         if self.tooltip:
                             self.tooltip.destroy()
@@ -298,7 +440,7 @@ class Ventana:
                             pady=5,
                         ).pack()
 
-                # Detectar las barras de gastos
+                # Detect expense bars
                 for i, rect in enumerate(bars_gastos):
                     if rect.contains(event)[0]:
                         row = data.iloc[i]
@@ -359,18 +501,20 @@ class Ventana:
         self.parent.clipboard_clear()
         self.parent.clipboard_append(invoice)
 
-# Ejemplo de uso
+# Example usage
 if __name__ == "__main__":
     proyecto = Proyecto('Contabilidad', 'contabilidad.db', 'https://drive.google.com/drive/folders/your_folder_id')
     print("Total Ingresos:", proyecto.calcular_total_ingresos())
     print("Total Gastos:", proyecto.calcular_total_gastos())
     print("Balance:", proyecto.calcular_balance())
+    print(proyecto.get_accurate_data())
+    print(proyecto.get_basic_data())
 
     from tkinter import Tk
 
     root = Tk()
     ventana = Ventana(root, proyecto, 'anual')
-    ventana.mostrar_chart()
+    ventana.show_chart()
     root.mainloop()
 
 

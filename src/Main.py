@@ -9,33 +9,30 @@ from src.TelegramBot import TelegramBot
 def check_bot_notifications(app :MainDashBoard, stop_event, shared_data, condition):
     while not stop_event.is_set():
         with condition:
-            print("Hilo de notificaciones esperando solicitud del bot...")
-            condition.wait()  # Esperar a que el bot solicite un mensaje
+            print("Notification thread waiting for bot request...")
+            condition.wait()  # Wait for the bot to request a message
 
             if stop_event.is_set():
                 break
 
-            print("Hilo activado para generar mensaje.")
+            print("Thread activated to generate message.")
             lock = shared_data["lock"]
             lock.acquire()
             try:
-                # Generar el mensaje desde la interfaz
+                # Generate the message from the interface
                 string = app.project_manager.get_upcoming_payments_string()
                 shared_data["payment_message"] = string
-                #print("Mensaje generado:", string)
+                #print("Message generated:", string)
             finally:
                 lock.release()
 
-            # Notificar al bot que el mensaje está listo
+            # Notify the bot that the message is ready
             condition.notify_all()
         
 
 def start_bot(bot: TelegramBot, stop_event):
-    try:
         bot.start_bot()
-    except (KeyboardInterrupt, SystemExit):
-        bot.stop_bot()
-        stop_event.set()
+   
 
 def main():
     root = tk.Tk()
@@ -44,10 +41,10 @@ def main():
     shared_data["payment_message"] = ""
     shared_data["lock"] = manager.Lock()
 
-    # Condición para sincronización
+    # Condition for synchronization
     condition = manager.Condition()
 
-    bot = TelegramBot(shared_data, condition)  # Pasar dict al bot
+    bot = TelegramBot(shared_data, condition)  # Pass dict to the bot
     stop_event = threading.Event()
     bot_process = multiprocessing.Process(target=start_bot, args=(bot, stop_event))
     bot_process.start()
@@ -56,24 +53,24 @@ def main():
 
     def on_closing():
         """
-        Manejar el cierre de la aplicación.
+        Handle application closing.
         """
-        print("Cerrando aplicación...")
+        print("Closing application...")
         stop_event.set()
-        bot_process.terminate()
-        lock = shared_data["lock"]
-        lock.acquire()  
+        bot_process.terminate() 
+        
         with condition:
             condition.notify_all()
-            
+            condition.notify_all()
+            condition.notify_all()
 
         notification_thread.join()
         bot_process.join()
         root.destroy()
-        print("Aplicación cerrada.")
+        print("Application closed.")
 
 
-    # Crear y empezar la hebra para las notificaciones
+    # Create and start the notification thread
     notification_thread = threading.Thread(target=check_bot_notifications, args=(app, stop_event, shared_data, condition))
     notification_thread.start()
 
@@ -86,6 +83,9 @@ def main():
 if __name__ == "__main__":
     main()
 
-    print("Fin del programa")
+    print("End of program")
+
+
+
 
 

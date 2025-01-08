@@ -98,7 +98,7 @@ class PaginaTransacciones:
                  font=("Arial", 12)).grid(row=3, column=2, padx=5, pady=5, sticky="w")
         self.pstatus_var = tk.StringVar()
         self.pstatus_combobox = ttk.Combobox(self.search_frame, textvariable=self.pstatus_var,
-                                             values=["", "Paid", "Pending"], state="readonly", font=("Arial", 12))
+                                             values=["", "paid", "pending"], state="readonly", font=("Arial", 12))
         self.pstatus_combobox.grid(row=3, column=3, padx=5, pady=5, sticky="ew")
 
         # Search button

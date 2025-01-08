@@ -22,6 +22,12 @@ class ProjectManager:
                 "period": None
             }
 
+    def get_proyectos(self,name) -> Proyecto:
+        for proyecto in self.proyectos:
+            if proyecto.get_name() == name:
+                return proyecto
+        return None
+
 
     def _get_upcoming_payments(self):
         payments = []
@@ -38,12 +44,66 @@ class ProjectManager:
         payments = self._get_upcoming_payments()
         payments_str = ""
         for p in payments:
-            
-            payments_str += f"Concept: {p[0]} Total Amount:{p[1]} Currency: {p[4]} Deadline: {p[2]} Invoice Number: {p[3]}\n"
-            payments_str += "-----------------------------------\n"
-
+            payments_str += (
+                "-----------------------------------\n"
+                f"📌 *Concept:* {p[0]}\n"
+                f"💰 *Total Amount:* {p[1]:,.2f} {p[4]}\n"
+                f"⏳ *Deadline:* {p[2]}\n"
+                f"🧾 *Invoice Number:* {p[3]}\n"
+                "-----------------------------------\n\n"
+            )
 
         return payments_str
+    
+    def get_all_data(self):
+        datos = ""
+
+        datos += "The following data is given:" + "\n"
+
+        datos += "There are some general expenses related to the company" + "\n"
+
+        datos += self.gastos_db.get_basic_data()
+
+        datos += "\n"
+
+        datos += "There are some projects related to the company" + "\n"
+
+
+        for proyecto in self.proyectos:
+            datos += "For project: " + proyecto.get_name() + "\n" +"The following data is given:" + "\n"
+            datos += proyecto.get_basic_data()
+            datos += "\n"
+
+        datos += "That's all the data available" + "\n"
+
+
+        return datos
+    
+    def get_all_exhaustive_data(self):
+        datos = ""
+
+        datos += "The following data is given:" + "\n"
+
+        datos += "There are some general expenses related to the company" + "\n"
+
+        datos += self.gastos_db.get_basic_data()
+
+        datos += "\n"
+
+        datos += "There are some projects related to the company" + "\n"
+
+
+        for proyecto in self.proyectos:
+            datos += "For project: " + proyecto.get_name() + "\n" +"The following data is given:" + "\n"
+            datos += proyecto.get_accurate_data()
+            datos += "\n"
+
+        datos += "That's all the data available" + "\n"
+
+        return datos 
+
+        
+
     
     
 
