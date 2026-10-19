@@ -1,2 +1,4 @@
 # Archivos de entorno
 keys.env
+
+__pycache__/

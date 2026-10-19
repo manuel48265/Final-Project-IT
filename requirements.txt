@@ -4,6 +4,8 @@ weasyprint==63.1
 python-telegram-bot==21.10
 matplotlib==3.9.1
 Pillow==10.4.0
-tk==0.1.0
-tkinter==0.1.0
-sqlite3==3.39.3
+python-dotenv
+requests
+markdown
+tkhtmlview
+# tkinter and sqlite3 ship with Python; on Debian/Ubuntu install Tkinter with: sudo apt install python3-tk
