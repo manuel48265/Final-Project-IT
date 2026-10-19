@@ -40,7 +40,7 @@ class Currency:
             url = f"https://api.exchangerate-api.com/v4/latest/{Currency.current_currency}"
             response = requests.get(url)
             Currency.rates = response.json()['rates']
-        elif (datetime.now() - Currency.last_update).min > Currency.time_delta:
+        elif datetime.now() - Currency.last_update > Currency.time_delta:
             Currency.last_update = datetime.now()
             url = f"https://api.exchangerate-api.com/v4/latest/{Currency.current_currency}"
             response = requests.get(url)
